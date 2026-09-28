@@ -13,7 +13,8 @@ import time
 
 NAME = 'ld-codestyle-online'
 REPO = 'LastDreamTeam/LDCodeStyleAgentSkill'
-DEFAULTS = {'schema_version': 1, 'human_name': 'LD', 'interval_days': 7, 'auto_update': False}
+DEFAULTS = {'schema_version': 1, 'human_name': 'LD', 'human_commit_name': '主人',
+            'interval_days': 7, 'auto_update': False}
 
 
 def load_json(path, default):
@@ -70,6 +71,13 @@ def locked(directory):
         lock.unlink()
 
 
+def validate_commit_name(value):
+    if (not isinstance(value, str) or not 1 <= len(value) <= 40
+            or not value.isprintable() or value != value.strip()
+            or any(char in value for char in '#|+:：【】[]')):
+        raise ValueError('human_commit_name must be 1-40 visible characters without header delimiters')
+
+
 def config_at(directory):
     config = load_json(directory / 'config.json', DEFAULTS)
     if config.get('schema_version') != 1:
@@ -84,6 +92,8 @@ def config_at(directory):
     config.setdefault('auto_update', False)
     if type(config['auto_update']) is not bool:
         raise ValueError('auto_update must be a boolean')
+    config.setdefault('human_commit_name', '主人')
+    validate_commit_name(config['human_commit_name'])
     return config
 
 
@@ -276,14 +286,37 @@ def synchronize(skill, directory, config, *, idle, force=False, approved=False, 
     return {**result, **receipt, 'status': 'updated', 'installed_version': after}
 
 
+def commit_header(config, model, bot, summary, *, mixed_human=False):
+    # OpenAI: Render an already-reviewed attribution decision; never guess authorship from a word match.
+    for value in (model, summary) + ((bot,) if bot else ()):
+        if (not isinstance(value, str) or not value or not value.isprintable()
+                or value != value.strip() or '|' in value):
+            raise ValueError('Commit fields must be non-empty single-line text without pipe delimiters')
+    if any(token in value for value in (model, bot or '')
+           for token in (' + ', '模型：', '##')):
+        raise ValueError('Bot/model must not contain extra header identity structure')
+    name = config['human_commit_name']
+    validate_commit_name(name)
+    human = f'{name} + ' if mixed_human else ''
+    identity = f'{bot} + {model}' if bot else model
+    return f'##{human}模型：{identity} | {summary}'
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--skill-root', type=Path, default=Path(__file__).resolve().parents[1])
     parser.add_argument('--data-root', type=Path)
     commands = parser.add_subparsers(dest='command', required=True)
     commands.add_parser('show')
+    header = commands.add_parser('commit-header', help='Render a header; does not stage, commit, push or inspect Git')
+    header.add_argument('--model', required=True)
+    header.add_argument('--bot', default='')
+    header.add_argument('--summary', required=True)
+    header.add_argument('--mixed-human', action='store_true',
+                        help='Caller has verified human contribution in the staged change')
     configure = commands.add_parser('config')
     configure.add_argument('--human-name')
+    configure.add_argument('--human-commit-name')
     configure.add_argument('--interval-days', type=int)
     configure.add_argument('--auto-update', choices=('on', 'off'))
     for command in ('check', 'sync'):
@@ -303,6 +336,8 @@ def main():
                 candidate = dict(config)
                 if args.human_name is not None:
                     candidate['human_name'] = args.human_name
+                if args.human_commit_name is not None:
+                    candidate['human_commit_name'] = args.human_commit_name
                 if args.interval_days is not None:
                     candidate['interval_days'] = args.interval_days
                 if args.auto_update is not None:
@@ -311,8 +346,10 @@ def main():
                     raise ValueError('Invalid human name')
                 if not 1 <= candidate['interval_days'] <= 365:
                     raise ValueError('interval_days must be 1..365')
+                validate_commit_name(candidate['human_commit_name'])
                 config = candidate
-            save_json(directory / 'config.json', config)
+            if args.command != 'commit-header':
+                save_json(directory / 'config.json', config)
             result = {'state': load_json(directory / 'state.json', {})}
             if args.command == 'check':
                 current = load_json(skill / 'assets/version.json', {})['version']
@@ -320,6 +357,9 @@ def main():
             elif args.command == 'sync':
                 result = synchronize(skill, directory, config, idle=args.idle,
                                      force=args.force, approved=args.approve_update)
+            elif args.command == 'commit-header':
+                result = {'header': commit_header(config, args.model, args.bot, args.summary,
+                                                  mixed_human=args.mixed_human)}
             print(json.dumps({'data_dir': str(directory), 'config': config, **result}, ensure_ascii=False))
     except (OSError, ValueError, KeyError, TypeError, subprocess.TimeoutExpired) as exc:
         print(json.dumps({'status': 'error', 'error': str(exc)}, ensure_ascii=False))

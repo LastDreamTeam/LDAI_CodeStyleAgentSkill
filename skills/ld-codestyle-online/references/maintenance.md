@@ -8,24 +8,18 @@
 
 ```sh
 python -B scripts/maintain.py show
-python -B scripts/maintain.py config --human-name 自己的人类名
-python -B scripts/maintain.py config --interval-days 7
 python -B scripts/maintain.py check
 python -B scripts/maintain.py sync --idle
 ```
 
-全局参数位于子命令之前：
-
-```sh
-python -B scripts/maintain.py --data-root <终端分配的数据根目录> show
-```
+可修改参数的命令集中在[README 参数设置](https://github.com/LastDreamTeam/LDCodeStyleAgentSkill#参数设置)，这里仅说明读取、维护和安全行为。数据根等全局参数位于子命令之前，须与该安装已有调用方式一致。
 
 - `show`：读/初始化该实例配置并显示实际数据位置，无网络。
-- `config`：仅修改配置，不改技能正文或项目注释。人类名接受 1–40 个字母/汉字/数字/下划线/短横线，不含冒号；识别源码标记时再加冒号。
+- `human_name` 是人类注释标识，默认 `LD`；`human_commit_name` 是混合提交显示名，默认 `主人`。它们是独立偏好，不改技能正文、项目注释或 Git 身份；值约束和修改方式见 README。
 - `check`：只查官方 `main` 的版本清单，不更新技能。用户主动要求“检查更新”时用 `check --force` 即刻查询，不必等周期；无 `--force` 则按默认7天节流。记录尝试和成功两个时间，失败不冒充成功。即使 `auto_update=true`，此命令也只检查。
 - `sync --idle`：按周期检查，并执行更新策略。默认 `auto_update=false`，有新版返回 `update_confirmation_required`，由 Agent 提示用户是否更新，不调用更新后端；同一周期再调用返回 `not_due`，不反复催问。
 - `sync --idle --approve-update`：**只在用户明确同意本次更新后**调用，使用缓存的新版本信息或到期检查结果执行；不改变长期自动更新开关。若此前更新失败且仍在重试节流期，会返回 `update_retry_not_due`，不是已更新；核清失败原因、获得明确重试授权并确认空档后才可加 `--force`，一次同意不保证立刻安装成功。
-- `config --auto-update on` / `config --auto-update off`：仅按用户明确要求开启/关闭本实例的自动更新。开启后 `sync --idle` 有新版直接更新，无逐次询问；安装说明示例不是开启授权。旧 schema-1 配置没有该字段时补为关闭，保留人类名和频率；非法非布尔值拒绝，不自动纠正。
+- 自动更新开关仅按用户明确要求修改，操作见 README。开启后 `sync --idle` 有新版直接更新，无逐次询问；安装说明示例不是开启授权。旧 schema-1 配置缺 `auto_update` 时补为关闭，缺 `human_commit_name` 时补为“主人”，保留原人类标识、频率和其他已有偏好；非法值拒绝，不自动纠正。
 - `--idle` 是调用方确认此安装未被业务任务占用，不自动探测所有 CLI/桌面会话。得到更新授权但没有空档时返回 `deferred_until_idle`。更新后重新读 SKILL.md，新任务采用新规则；运行中的任务不切换。
 - `--force` **只越过时间门槛，不代表更新同意**；也绝不覆盖本地改动、换分支、改变来源或突破原生门禁。一次同意不保存为长期授权。
 
