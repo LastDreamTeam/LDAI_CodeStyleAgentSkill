@@ -1,7 +1,7 @@
 ---
 name: ld-codestyle-online
 description: "Use when adopting LD Unity or explicit OO governance."
-version: 0.1.1
+version: 0.1.2
 author: "LD (LastDream / 最后的梦), Hermes Agent"
 license: "CC-BY-SA-4.0; scripts: AGPL-3.0-only"
 platforms: [linux, macos, windows]
@@ -13,7 +13,9 @@ metadata:
 
 # LD CodeStyle Online
 
-让人类通过 Markdown、自然语言和小而清楚的代码契约表达创意、设计与边界；Agent 承接可替换的实现与验证。主要面向 Unity 重型开发，不是所有工程的强制模板。本在线版基于 LD v6 实践整理，独立版本 **0.1.1**，不与旧版叠加执行。
+让人类通过 Markdown、自然语言和小而清楚的代码契约表达创意、设计与边界；Agent 承接可替换的实现与验证。主要面向 Unity 重型开发，不是所有工程的强制模板。本在线版基于 LD v6 实践整理，独立版本 **0.1.2**，不与旧版叠加执行。
+
+本技能首先约束开发规范、习惯与风格，相对面向更多放权给 AI 的 Solo 开发者和希望减少代码失控的新手；不保证适合所有人，保障目标仍在完善、效果可能有限，不能代替测试和必要的人类判断。
 
 ## 何时启用
 
@@ -26,7 +28,9 @@ metadata:
 - 读 [协作契约](references/contract.md)；读最近 `AGENTS.md`、模块说明、真实 Git 分支/HEAD/脏状态以及目标 Base/接口和活跃实现。
 - Core 工作另读 [Agentic 模块索引](references/agentic.md)；索引是缓存，不高于源码、序列化契约和当前人类指令。
 - 使用终端工具运行 `python scripts/maintain.py show`（当前目录为本技能目录；或把脚本写成此安装的绝对路径），读取 `human_name`，默认 `LD`。配置失败须报告，不覆盖损坏文件，也不猜用户设定。
-- 在**开始新任务前**按 [维护说明](references/maintenance.md)运行 `python scripts/maintain.py sync --idle`。它按周频门槛检查，且只在已有安全更新后端下更新。`--idle` 是调用方确认没有任务占用的声明，不是脚本自动检测了所有 Agent；无法确认时仅 `check`，不更新。
+- **用户要求主动检查时**，按 [维护说明](references/maintenance.md)运行 `python -B scripts/maintain.py check --force`，即刻检查但不改动技能；即使自动更新已开启，单独的“检查”也不是更新授权。
+- 开始采用本技能的新任务时运行 `python -B scripts/maintain.py sync --idle`：到设定周期（默认7天）才快速联网检查。**`auto_update` 默认关闭**；返回 `update_confirmation_required` 时简短告知版本并询问是否更新，不自行同意。`not_due` 不重复催问。用户同意本次后才用 `sync --idle --approve-update`；此参数不改变长期开关。
+- 仅在用户明确要求时用 `config --auto-update on` 开启该实例自动更新（`off` 关闭）。开启后在处理过程的安全空档直接更新，不再逐次询问。`--idle` 是调用方确认没有任务占用，不是脚本自动探测；无法确认则仅 `check`。用户冻结版本、要求只检查或拒绝更新时，以其要求为准。
 - 更新成功后重新读取新版本再开始任务。已进行的工作固定当前规则，不中途更新或因网络失败阻塞业务。此技能不安装后台任务，不意味着所有终端已经接入。
 
 ## 人类与 Agent 的控制面

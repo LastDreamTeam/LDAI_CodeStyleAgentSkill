@@ -35,6 +35,42 @@ class MaintenanceTests(unittest.TestCase):
             again = self.run_cli(root/'codex-cli', root/'data', 'show')
             self.assertEqual(json.loads(again.stdout)['config']['human_name'], '梦')
 
+    def test_auto_update_is_opt_in_persistent_and_per_install(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            install, other, data = root/'install', root/'other', root/'data'
+            install.mkdir()
+            other.mkdir()
+            result = self.run_cli(install, data, 'show')
+            self.assertEqual(result.returncode, 0, result.stderr)
+            value = json.loads(result.stdout)
+            self.assertIs(value['config'].get('auto_update'), False)
+            legacy = {'schema_version': 1, 'human_name': '保留', 'interval_days': 9}
+            config_file = Path(value['data_dir'])/'config.json'
+            config_file.write_text(json.dumps(legacy), encoding='utf-8')
+            result = self.run_cli(install, data, 'show')
+            self.assertEqual(result.returncode, 0, result.stderr)
+            value = json.loads(result.stdout)
+            self.assertIs(value['config']['auto_update'], False)
+            self.assertEqual(value['config']['human_name'], '保留')
+            self.assertEqual(value['config']['interval_days'], 9)
+            result = self.run_cli(install, data, 'config', '--auto-update', 'on')
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIs(json.loads(result.stdout)['config']['auto_update'], True)
+            result = self.run_cli(install, data, 'show')
+            self.assertIs(json.loads(result.stdout)['config']['auto_update'], True)
+            result = self.run_cli(other, data, 'show')
+            self.assertIs(json.loads(result.stdout)['config']['auto_update'], False)
+            result = self.run_cli(install, data, 'config', '--auto-update', 'off')
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIs(json.loads(result.stdout)['config']['auto_update'], False)
+            bad = dict(legacy, auto_update='false')
+            raw = json.dumps(bad)
+            config_file.write_text(raw, encoding='utf-8')
+            result = self.run_cli(install, data, 'show')
+            self.assertNotEqual(result.returncode, 0)
+            self.assertEqual(config_file.read_text(encoding='utf-8'), raw)
+
     def test_weekly_check_throttles_network_and_records_success(self):
         import importlib.util
         from unittest.mock import Mock

@@ -13,7 +13,7 @@ import time
 
 NAME = 'ld-codestyle-online'
 REPO = 'LastDreamTeam/LDCodeStyleAgentSkill'
-DEFAULTS = {'schema_version': 1, 'human_name': 'LD', 'interval_days': 7}
+DEFAULTS = {'schema_version': 1, 'human_name': 'LD', 'interval_days': 7, 'auto_update': False}
 
 
 def load_json(path, default):
@@ -80,6 +80,10 @@ def config_at(directory):
     days = config.get('interval_days')
     if type(days) is not int or not 1 <= days <= 365:
         raise ValueError('interval_days must be an integer between 1 and 365')
+    # OpenAI: Older schema-1 installs inherit the safer opt-in policy, preserving all preferences.
+    config.setdefault('auto_update', False)
+    if type(config['auto_update']) is not bool:
+        raise ValueError('auto_update must be a boolean')
     return config
 
 
@@ -233,13 +237,18 @@ def apply_update(skill, directory):
     return receipt
 
 
-def synchronize(skill, directory, config, *, idle, force=False, fetch=None, updater=None):
+def synchronize(skill, directory, config, *, idle, force=False, approved=False, fetch=None, updater=None):
     current = load_json(skill / 'assets/version.json', {})['version']
     result = check(directory, config, current, force=force, fetch=fetch)
     state = result['state']
     latest = state.get('latest_version', current)
     if version_tuple(latest) <= version_tuple(current):
         return result
+    if config.get('auto_update') is not True and not approved:
+        # OpenAI: Frequency bypass is not consent; do not re-prompt within the same interval.
+        if result['status'] == 'not_due':
+            return result
+        return {**result, 'status': 'update_confirmation_required'}
     if not idle:
         return {**result, 'status': 'deferred_until_idle'}
     now = time.time()
@@ -276,11 +285,14 @@ def main():
     configure = commands.add_parser('config')
     configure.add_argument('--human-name')
     configure.add_argument('--interval-days', type=int)
+    configure.add_argument('--auto-update', choices=('on', 'off'))
     for command in ('check', 'sync'):
         sub = commands.add_parser(command)
         sub.add_argument('--force', action='store_true', help='Bypass time interval only; never overwrite edits')
         if command == 'sync':
             sub.add_argument('--idle', action='store_true', help='Caller confirms no task uses this installation')
+            sub.add_argument('--approve-update', action='store_true',
+                             help='Caller has explicit user approval for this update only')
     args = parser.parse_args()
     skill = args.skill_root.resolve()
     directory = data_dir(skill, args.data_root)
@@ -293,6 +305,8 @@ def main():
                     candidate['human_name'] = args.human_name
                 if args.interval_days is not None:
                     candidate['interval_days'] = args.interval_days
+                if args.auto_update is not None:
+                    candidate['auto_update'] = args.auto_update == 'on'
                 if not re.fullmatch(r'[\w\-\u4e00-\u9fff]{1,40}', candidate['human_name']):
                     raise ValueError('Invalid human name')
                 if not 1 <= candidate['interval_days'] <= 365:
@@ -304,7 +318,8 @@ def main():
                 current = load_json(skill / 'assets/version.json', {})['version']
                 result = check(directory, config, current, force=args.force)
             elif args.command == 'sync':
-                result = synchronize(skill, directory, config, idle=args.idle, force=args.force)
+                result = synchronize(skill, directory, config, idle=args.idle,
+                                     force=args.force, approved=args.approve_update)
             print(json.dumps({'data_dir': str(directory), 'config': config, **result}, ensure_ascii=False))
     except (OSError, ValueError, KeyError, TypeError, subprocess.TimeoutExpired) as exc:
         print(json.dumps({'status': 'error', 'error': str(exc)}, ensure_ascii=False))

@@ -95,10 +95,10 @@ class Guards(unittest.TestCase):
                 m.save_json(manifest, {'version': '0.2.0'})
                 return {'backend': 'test-double'}
             updater = Mock(side_effect=install)
-            result = m.synchronize(skill, data, m.DEFAULTS, idle=False, fetch=fetch, updater=updater)
+            result = m.synchronize(skill, data, dict(m.DEFAULTS, auto_update=True), idle=False, fetch=fetch, updater=updater)
             self.assertEqual(result['status'], 'deferred_until_idle')
             updater.assert_not_called()
-            result = m.synchronize(skill, data, m.DEFAULTS, idle=True, fetch=fetch, updater=updater)
+            result = m.synchronize(skill, data, dict(m.DEFAULTS, auto_update=True), idle=True, fetch=fetch, updater=updater)
             self.assertEqual(result['status'], 'updated')
             self.assertEqual(fetch.call_count, 1)
             self.assertEqual(updater.call_count, 1)
@@ -110,7 +110,7 @@ class Guards(unittest.TestCase):
             data.mkdir()
             m.save_json(skill/'assets/version.json', {'version': '0.1.0'})
             with self.assertRaisesRegex(ValueError, 'did not install'):
-                m.synchronize(skill, data, m.DEFAULTS, idle=True,
+                m.synchronize(skill, data, dict(m.DEFAULTS, auto_update=True), idle=True,
                               fetch=lambda: {'name': m.NAME, 'version': '0.2.0'},
                               updater=lambda *_: {'exit_code': 0})
             state = m.load_json(data/'state.json', {})
