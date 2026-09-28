@@ -131,5 +131,21 @@ class Guards(unittest.TestCase):
                     m.apply_update(skill, data)
                 backup.assert_not_called()
 
+    def test_native_source_accepts_only_exact_official_routes(self):
+        self.assertTrue(callable(getattr(m, 'validate_native_source', None)))
+        expected = f'{m.REPO}/skills/{m.NAME}'
+        url = f'https://github.com/{m.REPO}/tree/' + 'a'*40 + f'/skills/{m.NAME}'
+        for source, identifier in [('github', expected), ('skills.sh', 'skills-sh/'+expected)]:
+            m.validate_native_source({'source': source, 'identifier': identifier,
+                                      'metadata': {'source_url': url}})
+        for entry in [
+            {'source': 'other', 'identifier': expected},
+            {'source': 'skills.sh', 'identifier': 'skills-sh/'+expected,
+             'metadata': {'source_url': 'https://github.com/other/repo/tree/main/skill'}},
+            {'source': 'github', 'identifier': expected+'/other'},
+        ]:
+            with self.assertRaises(ValueError):
+                m.validate_native_source(entry)
+
 if __name__ == '__main__':
     unittest.main()

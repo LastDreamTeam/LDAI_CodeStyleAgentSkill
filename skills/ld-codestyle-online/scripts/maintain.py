@@ -196,6 +196,19 @@ def backup_skill(skill, directory):
     return str(target)
 
 
+def validate_native_source(entry):
+    expected = f'{REPO}/skills/{NAME}'
+    routes = {'github': expected, 'skills.sh': f'skills-sh/{expected}',
+              'skills-sh': f'skills-sh/{expected}'}
+    source = entry.get('source')
+    if source not in routes or entry.get('identifier') != routes[source]:
+        raise ValueError('Native manager source identity mismatch')
+    url = entry.get('metadata', {}).get('source_url', '')
+    pattern = rf'https://github\.com/{re.escape(REPO)}/tree/[0-9a-f]{{40}}/skills/{NAME}/?'
+    if not re.fullmatch(pattern, url):
+        raise ValueError('Native manager source URL is not this official pinned skill')
+
+
 def apply_update(skill, directory):
     home = hermes_home(skill)
     if home:
@@ -203,9 +216,7 @@ def apply_update(skill, directory):
             raise ValueError('Hermes update requires a data directory outside the skill')
         lock = load_json(home / 'skills/.hub/lock.json', {})
         entry = lock.get('installed', {}).get(NAME, {})
-        expected = f'{REPO}/skills/{NAME}'
-        if entry.get('identifier') != expected or entry.get('source') != 'github':
-            raise ValueError('Native manager source identity mismatch')
+        validate_native_source(entry)
         if (home / 'skills' / entry.get('install_path', '')).resolve() != skill:
             raise ValueError('Native manager target mismatch')
         backup = backup_skill(skill, directory)

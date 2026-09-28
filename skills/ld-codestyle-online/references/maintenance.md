@@ -26,7 +26,7 @@ python -B scripts/maintain.py --data-root <终端分配的数据根目录> show
 
 ## 更新后端
 
-1. **Hermes 原生安装**：核该安装所属 profile 的 `.hub/lock.json`，技能名、GitHub 来源标识、安装路径必须吻合，只调用 `hermes skills update ld-codestyle-online`，不加原生 `--force`。继承原生扫描和本地改动保护，再回读版本，不能因为退出码为零就报已更新。
+1. **Hermes 原生安装**：核该安装所属 profile 的 `.hub/lock.json`，技能名、精确来源标识、官方 GitHub 固定 SHA URL 和安装路径必须吻合。兼容原生记录为 `github` 或 `skills.sh` / `skills-sh` 的同一官方目录，不接受任意同名来源。只调用 `hermes skills update ld-codestyle-online`，不加原生 `--force`。继承原生扫描和本地改动保护，再回读版本，不能因为退出码为零就报已更新。
 2. **独立 Git 克隆**：技能须位于仓库的 `skills/ld-codestyle-online`，`origin` 必须是本项目官方 HTTPS 地址，分支须为 `main` 且无本地修改/未跟踪文件。fetch 后检查忽略文件冲突、fast-forward 祖先关系并再次检查工作树，再备份并执行 `merge --ff-only --no-overwrite-ignore`。不 stash/reset/clean，不强推，不改远端，不更新业务工程。
 3. 手动文件拷贝、其他管理器或固定 tag/开发分支：可以读规范/配置/查版本，但不会擅自重装或自动转换管理方式。需用该产品正式更新入口或改成独立克隆后再接入。
 
