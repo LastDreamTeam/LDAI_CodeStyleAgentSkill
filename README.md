@@ -118,7 +118,7 @@ python -B scripts/maintain.py config --auto-update off
 
 ## 版本与贡献
 
-技能名固定为 `ld-codestyle-online`，内部使用语义版本；当前为 **0.1.3**。见 [CHANGELOG.md](CHANGELOG.md)。更新不是通过改技能名为 v7、v8 来分发。
+技能名固定为 `ld-codestyle-online`，内部使用语义版本；当前为 **0.1.4**。见 [CHANGELOG.md](CHANGELOG.md)。更新不是通过改技能名为 v7、v8 来分发。
 
 欢迎以 Issue 或 PR 分享实践、问题和改进。贡献者应说明适用工程、真实收益、兼容风险与验证；不以单个工程的临时做法直接替代通用规则。贡献流程与三段式提交要求见 [CONTRIBUTING.md](CONTRIBUTING.md)。
 

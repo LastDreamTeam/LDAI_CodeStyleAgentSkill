@@ -114,6 +114,26 @@ class CommitIdentityTests(unittest.TestCase):
             self.assertEqual(json.loads(result.stdout)['header'],
                              '##模型：vendor/model+adapter | 保留合法原标识')
 
+    def test_document_templates_produce_exact_git_subject(self):
+        import re
+        docs = [ROOT/'skills/ld-codestyle-online/SKILL.md',
+                ROOT/'skills/ld-codestyle-online/references/commit.md']
+        templates = [block for doc in docs
+                     for block in re.findall(r'```text\n(.*?)\n```', doc.read_text(), re.S)
+                     if block.startswith('##') and '##问题：' in block]
+        self.assertTrue(templates)
+        with tempfile.TemporaryDirectory() as tmp:
+            subprocess.run(['git', 'init', '-q', tmp], check=True, capture_output=True)
+            for template in templates:
+                with self.subTest(header=template.splitlines()[0]):
+                    subprocess.run(['git', '-C', tmp, '-c', 'user.name=SkillFixture',
+                                    '-c', 'user.email=fixture@example.invalid',
+                                    '-c', 'commit.gpgsign=false', 'commit', '--allow-empty', '-F', '-'],
+                                   input=template, text=True, check=True, capture_output=True)
+                    subject = subprocess.check_output(['git', '-C', tmp, 'log', '-1', '--format=%s'],
+                                                      text=True).strip()
+                    self.assertEqual(subject, template.splitlines()[0])
+
     def test_configuration_edit_commands_are_centralized_in_readme(self):
         import re
         pattern = r'config\s+--(?:human-name|human-commit-name|interval-days|auto-update)\b'
