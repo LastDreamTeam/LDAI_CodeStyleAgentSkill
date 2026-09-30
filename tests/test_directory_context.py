@@ -45,5 +45,16 @@ class DirectoryContextTests(unittest.TestCase):
             self.assertIn(required, text)
 
 
+    def test_cleanup_authority_is_explicit_in_entry_spec_and_templates(self):
+        paths = [SKILL/'SKILL.md', SKILL/'references/directory-context.md',
+                 *(SKILL/f'templates/module-{kind}.md' for kind in ('memory', 'user', 'readme'))]
+        for path in paths:
+            text = path.read_text(encoding='utf-8')
+            with self.subTest(path=path.name):
+                for term in ('九成以上把握', '无损整合', '内容压缩', '专门获授权', '审计/辅助模型'):
+                    self.assertIn(term, text)
+        self.assertIn('否则直接忽略', (SKILL/'SKILL.md').read_text(encoding='utf-8'))
+
+
 if __name__ == '__main__':
     unittest.main()

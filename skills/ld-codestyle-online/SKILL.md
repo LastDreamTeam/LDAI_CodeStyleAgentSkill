@@ -1,7 +1,7 @@
 ---
 name: ld-codestyle-online
 description: "Use when adopting LD Unity or explicit OO governance."
-version: 0.2.0
+version: 0.2.1
 author: "LD (LastDream / 最后的梦), Hermes Agent"
 license: "CC-BY-SA-4.0; scripts: AGPL-3.0-only"
 platforms: [linux, macos, windows]
@@ -13,7 +13,7 @@ metadata:
 
 # LD CodeStyle Online
 
-让人类通过 Markdown、自然语言和小而清楚的代码契约表达创意、设计与边界；Agent 承接可替换的实现与验证。主要面向 Unity 重型开发，不是所有工程的强制模板。本在线版基于 LD v6 实践整理，独立版本 **0.2.0**，不与旧版叠加执行。
+让人类通过 Markdown、自然语言和小而清楚的代码契约表达创意、设计与边界；Agent 承接可替换的实现与验证。主要面向 Unity 重型开发，不是所有工程的强制模板。本在线版基于 LD v6 实践整理，独立版本 **0.2.1**，不与旧版叠加执行。
 
 本技能首先约束开发规范、习惯与风格，相对面向更多放权给 AI 的 Solo 开发者和希望减少代码失控的新手；不保证适合所有人，保障目标仍在完善、效果可能有限，不能代替测试和必要的人类判断。
 
@@ -56,6 +56,7 @@ metadata:
 - 这是项目共享文档，不是当前Bot的Hermes核心记忆；不同厂商Agent可读可维护。用户要求与Agent推断分开，未来设想不自动变成执行授权，一次性指令不升格为永久规则。
 - 历史 `Readme.md` 默认是人类资料，**不覆盖、不改名、不自动改写**。Windows等环境会将它与 `README.md`视作同名；有冲突时使用[同一规范的AgentDocs兼容布局](references/directory-context.md)，不能在Linux上建两个大小写变体后让Windows无法检出。
 - 授权写任务中按实际增量维护触及区域；只读任务不建文档，不全仓补齐、不写流水账。模板、来源/状态字段、继承与过期处理见[详细规范](references/directory-context.md)。
+- 普通Agent仅在有**九成以上把握**时剔除明显重复或无损整合；否则直接忽略该整理并保留原文。**内容压缩**通常仅由专门获授权允许的审计/辅助模型执行，不能把自认为有把握当授权，也不能借去重删掉独立信息。
 
 ## 注释归属
 
