@@ -1,7 +1,7 @@
 ---
 name: ld-codestyle-online
 description: "Use when adopting LD Unity or explicit OO governance."
-version: 0.2.1
+version: 0.2.2
 author: "LD (LastDream / 最后的梦), Hermes Agent"
 license: "CC-BY-SA-4.0; scripts: AGPL-3.0-only"
 platforms: [linux, macos, windows]
@@ -13,7 +13,7 @@ metadata:
 
 # LD CodeStyle Online
 
-让人类通过 Markdown、自然语言和小而清楚的代码契约表达创意、设计与边界；Agent 承接可替换的实现与验证。主要面向 Unity 重型开发，不是所有工程的强制模板。本在线版基于 LD v6 实践整理，独立版本 **0.2.1**，不与旧版叠加执行。
+让人类通过 Markdown、自然语言和小而清楚的代码契约表达创意、设计与边界；Agent 承接可替换的实现与验证。**泛用支持是发展方向；目前主要针对并适用于 Unity 重型项目，暂不保证其他场景的功效。**跨宿主可安装或用户明确采用部分规则，不等于跨项目场景的效果已验证；不是所有工程的强制模板。本在线版基于 LD v6 实践整理，独立版本 **0.2.2**，不与旧版叠加执行。
 
 本技能首先约束开发规范、习惯与风格，相对面向更多放权给 AI 的 Solo 开发者和希望减少代码失控的新手；不保证适合所有人，保障目标仍在完善、效果可能有限，不能代替测试和必要的人类判断。
 
