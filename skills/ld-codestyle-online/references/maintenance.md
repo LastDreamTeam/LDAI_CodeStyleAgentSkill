@@ -1,6 +1,6 @@
 # 安装、配置与检查/更新
 
-首次安装请把[给 Agent 的安装说明](https://github.com/LastDreamTeam/LDCodeStyleAgentSkill/blob/main/skills/install.md)交给当前 Agent；它须完成环境识别、完整技能接入、实际检查及宿主发现验证，不只复制文档。
+首次安装请把[给 Agent 的安装说明](https://github.com/LastDreamTeam/LDAI_CodeStyleAgentSkill/blob/main/skills/install.md)交给当前 Agent；它须完成环境识别、完整技能接入、实际检查及宿主发现验证，不只复制文档。
 
 需要 Python 3.10+；Git 克隆更新另需 Git，Hermes 安装使用当前环境的 `hermes` 命令。没有 Python 时规范仍可阅读，但脚本未运行就不能声称已自动检查或更新。
 
@@ -12,7 +12,7 @@ python -B scripts/maintain.py check
 python -B scripts/maintain.py sync --idle
 ```
 
-可修改参数的命令集中在[README 参数设置](https://github.com/LastDreamTeam/LDCodeStyleAgentSkill#参数设置)，这里仅说明读取、维护和安全行为。数据根等全局参数位于子命令之前，须与该安装已有调用方式一致。
+可修改参数的命令集中在[README 参数设置](https://github.com/LastDreamTeam/LDAI_CodeStyleAgentSkill#参数设置)，这里仅说明读取、维护和安全行为。数据根等全局参数位于子命令之前，须与该安装已有调用方式一致。
 
 - `show`：读/初始化该实例配置并显示实际数据位置，无网络。
 - `human_name` 是人类注释标识，默认 `LD`；`human_commit_name` 是混合提交显示名，默认 `主人`。它们是独立偏好，不改技能正文、项目注释或 Git 身份；值约束和修改方式见 README。
@@ -30,6 +30,16 @@ python -B scripts/maintain.py sync --idle
 3. 手动文件拷贝、其他管理器或固定 tag/开发分支：可以读规范/配置/查版本，但不会擅自重装或自动转换管理方式。需用该产品正式更新入口或改成独立克隆后再接入。
 
 检查请求有 10 秒网络超时；单条后端命令有 120 秒上限。更新失败不自动循环重试；保留快照、记录更新阶段错误并回读磁盘实际版本，不冒称已经回滚或原文件一定未变。后续人工/Agent 核原因，确认后才能再次 `--force`（仍不越过内容保护）。版本被钉住、存在脏修改、来源不匹配或配置损坏时，明确报错而非自动“修复”。
+
+## 仓库更名兼容
+
+正式仓库为 `LastDreamTeam/LDAI_CodeStyleAgentSkill`；唯一旧名 `LastDreamTeam/LDCodeStyleAgentSkill` 仅用于已有安装兼容。新链接、克隆和版本检查使用正式地址，技能名与配置schema仍保持不变。
+
+- **旧Git安装**：保留原安装路径和数据根，旧版脚本可经GitHub现有更名重定向发现并获取新版；新版同时识别精确的新旧官方HTTPS origin，不自动改远端。重定向不可用时先核官方仓库身份和当前配置，再在用户授权下修正原origin，不移动目录或重建配置来绕过失败。
+- **旧Hermes安装**：允许旧名称的原生登记与重定向后的新固定SHA地址组合；仍核来源类型、完整标识、SHA与安装路径，不接受fork、同名仓库、分支URL或相似域名。原生登记无需手工改写；由原生管理器管理更新。
+- **首次升级前的旧脚本**若因登记已改新名而报来源不匹配，不改认证、不删登记、不放宽校验；检查真实登记后走该宿主原生的同名技能更新，按其本地修改/扫描/审批流程完成并回读版本。当前profile或审批不明时停止该更新，不另装第二份覆盖偏好。
+- 新版本备份包含新增 `templates/`。偏好按原安装真实路径保留；克隆目录更名会改变实例标识，**不要为了跟仓库更名而改本地安装目录名**。
+- 不能保证GitHub旧URL永远重定向；新用户一律走新入口。新版兼容旧标识不表示可以让旧名被他人重新占用后仍无条件信任，若仓库身份出现变化须停下核验。
 
 ## 数据位置、隔离与并发
 

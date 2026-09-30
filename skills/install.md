@@ -2,7 +2,7 @@
 
 > 用户只需把这一句交给自己的 Agent：
 >
-> **请阅读以下安装说明，为你当前的 Agent 环境安装 ld-codestyle-online，并验证主动检查更新可用：https://github.com/LastDreamTeam/LDCodeStyleAgentSkill/blob/main/skills/install.md**
+> **请阅读以下安装说明，为你当前的 Agent 环境安装 ld-codestyle-online，并验证主动检查更新可用：https://github.com/LastDreamTeam/LDAI_CodeStyleAgentSkill/blob/main/skills/install.md**
 
 本页是 Agent 可执行的安装流程，不是要求用户逐条复制的教程。**只有用户要求安装时才执行；仅阅读、评估或参考本文不构成安装授权。**在已有权限内自行完成环境识别、获取、接入和验证，不把普通步骤退回用户，也不反复询问同一项安装。系统/宿主审批、缺失权限和实质歧义仍须停在相应边界。用用户的语言简短汇报结果。
 
@@ -27,14 +27,16 @@
 
 ## 2. 从官方源获取并接入
 
-唯一默认更新源：`https://github.com/LastDreamTeam/LDCodeStyleAgentSkill.git`，通道 `main`，完整技能子目录 `skills/ld-codestyle-online`。不采用任意同名仓库。首次安装应取得官方当前版本；后续按语义版本更新，固定 tag/开发分支不会被强行转回 `main`。
+唯一默认更新源：`https://github.com/LastDreamTeam/LDAI_CodeStyleAgentSkill.git`，通道 `main`，完整技能子目录 `skills/ld-codestyle-online`。不采用任意同名仓库。首次安装应取得官方当前版本；后续按语义版本更新，固定 tag/开发分支不会被强行转回 `main`。
+
+仓库已从 `LastDreamTeam/LDCodeStyleAgentSkill` 更名，技能固定名未变。已有安装保留原目录和偏好，不重新复制或另装一份；先按[仓库更名兼容](ld-codestyle-online/references/maintenance.md#仓库更名兼容)确认原生登记/Git来源，再走现有后端原地更新。以下新安装入口均使用正式新名。
 
 ### A. Hermes 原生管理器
 
 确认命令运行在当前 profile 后，通过终端工具执行：
 
 ```sh
-hermes skills install LastDreamTeam/LDCodeStyleAgentSkill/skills/ld-codestyle-online
+hermes skills install LastDreamTeam/LDAI_CodeStyleAgentSkill/skills/ld-codestyle-online
 ```
 
 然后用 `hermes skills list` 和目标目录实际文件确认安装。需要重载时采用宿主支持的方式，不强行重启正在使用的 Agent。
@@ -49,7 +51,7 @@ hermes skills install LastDreamTeam/LDCodeStyleAgentSkill/skills/ld-codestyle-on
 2. 首次获取时通过终端工具执行下列命令（先将占位符替换为已确定的真实绝对路径；不要原样执行）：
 
 ```sh
-git clone --branch main --single-branch https://github.com/LastDreamTeam/LDCodeStyleAgentSkill.git "<REPO_DIR>"
+git clone --branch main --single-branch https://github.com/LastDreamTeam/LDAI_CodeStyleAgentSkill.git "<REPO_DIR>"
 git -C "<REPO_DIR>" remote get-url origin
 git -C "<REPO_DIR>" branch --show-current
 git -C "<REPO_DIR>" status --porcelain --untracked-files=all
@@ -71,7 +73,9 @@ import sys
 source = Path(sys.argv[1]).expanduser().resolve(strict=True)
 target = Path(sys.argv[2]).expanduser().absolute()
 manifest = json.loads((source / 'assets/version.json').read_text(encoding='utf-8'))
-if manifest.get('name') != 'ld-codestyle-online' or manifest.get('repository') != 'LastDreamTeam/LDCodeStyleAgentSkill':
+if manifest.get('name') != 'ld-codestyle-online' or manifest.get('repository') not in (
+    'LastDreamTeam/LDAI_CodeStyleAgentSkill', 'LastDreamTeam/LDCodeStyleAgentSkill'
+):
     raise SystemExit('Unexpected skill identity')
 if target.name != 'ld-codestyle-online':
     raise SystemExit('Keep the fixed skill name')

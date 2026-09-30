@@ -8,6 +8,9 @@
 <Module>/Scripts/
   I<Feature>ManagerBase.cs
   <Feature>ManagerBase.cs
+  MEMORY.md                  共有经验与模块事实
+  USER.md                    用户持久要求与业务意图
+  README.md                  区域概览与快速索引
   Agentic/
     <Feature>Manager.cs
   Sample/ 或独立 Demo 入口（按需）
@@ -28,7 +31,8 @@ Agentic 目录权限继承父模块，不能跨越接口、序列化或兄弟模
 - `Assets/LastDream/Core` / `Assets/LastDream/Scripts`：混合工程中的隔离区或尚未提升到正式结构的实验能力，也是合法布局。
 - 两套根依据现有所有权、成熟度和将来提取边界选择，不为美观互相搬迁。
 - 模块内按需放 `Scripts`、`Resources`、变种和 Sample，不机械生成空目录。
-- `Readme.md` 解释责任/非责任、入口、生命周期、资源前提；`Agentic.md` 为 AI 可维护索引缓存，不替代人类设计文档。
+- `MEMORY.md` / `USER.md` / `README.md` 在Base/配对接口控制区承载目录级共享上下文，细则见[目录记忆](directory-context.md)。历史 `Readme.md` 是原有人类文档，默认不干涉；存在大小写/所有权冲突时用 `AgentDocs/` 兼容布局，不覆盖它。
+- `Agentic.md` 保留Core模块索引职责；与新README用链接分工，避免双份长期漂移，不自行删除或迁移旧文档。
 - 美术源资料是长期资产，不擅自清理。Git/LFS 门槛按实际远端限制检查，不默认忽略整份美术库。
 - 不因为插件“不整齐”就搬目录；核 GUID、asmdef、Resources、原生依赖后优先项目侧 wrapper/adapter，不改第三方原件。
 

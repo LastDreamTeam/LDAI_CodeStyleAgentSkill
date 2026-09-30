@@ -22,7 +22,7 @@
 ##解决：说明人类贡献/既有约定与 Agent 本次改动各自的范围；真实验证和未验部分。
 ```
 
-其中 `主人` 来自本安装的 **`human_commit_name`**，默认值是“主人”；代码人类标识由独立的 **`human_name`** 控制，默认 `LD`。修改显示名为“褪色的梦”后，同一混合首行变为 `##褪色的梦 + 模型：…`，**不加 `【】`**，也不把源码里的 `LD:` 替换成网名。设置说明和命令只放在[README 参数设置](https://github.com/LastDreamTeam/LDCodeStyleAgentSkill#参数设置)。
+其中 `主人` 来自本安装的 **`human_commit_name`**，默认值是“主人”；代码人类标识由独立的 **`human_name`** 控制，默认 `LD`。修改显示名为“褪色的梦”后，同一混合首行变为 `##褪色的梦 + 模型：…`，**不加 `【】`**，也不把源码里的 `LD:` 替换成网名。设置说明和命令只放在[README 参数设置](https://github.com/LastDreamTeam/LDAI_CodeStyleAgentSkill#参数设置)。
 
 ## 如何识别混合贡献
 

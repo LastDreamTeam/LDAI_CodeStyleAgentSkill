@@ -12,7 +12,9 @@ import tempfile
 import time
 
 NAME = 'ld-codestyle-online'
-REPO = 'LastDreamTeam/LDCodeStyleAgentSkill'
+REPO = 'LastDreamTeam/LDAI_CodeStyleAgentSkill'
+# OpenAI: The sole previous repository name is an explicit alias, not a wildcard trust rule.
+OFFICIAL_REPOS = (REPO, 'LastDreamTeam/LDCodeStyleAgentSkill')
 DEFAULTS = {'schema_version': 1, 'human_name': 'LD', 'human_commit_name': '主人',
             'interval_days': 7, 'auto_update': False}
 
@@ -157,7 +159,8 @@ def update_git(skill, *, runner=run, before_apply=None):
     if Path(runner(cmd + ['rev-parse', '--show-toplevel'])).resolve() != repo:
         raise ValueError('Skill is not in its own repository clone')
     remote = runner(cmd + ['remote', 'get-url', 'origin'])
-    if remote not in (f'https://github.com/{REPO}', f'https://github.com/{REPO}.git'):
+    if remote not in tuple(f'https://github.com/{name}{suffix}'
+                           for name in OFFICIAL_REPOS for suffix in ('', '.git')):
         raise ValueError('Unexpected update origin; refusing to change it')
     if runner(cmd + ['branch', '--show-current']) != 'main':
         raise ValueError('Only the main channel can auto-update; pinned versions stay pinned')
@@ -193,7 +196,7 @@ def backup_skill(skill, directory):
             relative = path.relative_to(skill)
             if any(part.startswith('.') for part in relative.parts):
                 continue
-            if relative.parts[0] not in ('SKILL.md', 'references', 'scripts', 'assets'):
+            if relative.parts[0] not in ('SKILL.md', 'references', 'scripts', 'assets', 'templates'):
                 continue
             if path.name.lower() in ('credentials.json', 'auth.json', 'secrets.json'):
                 continue
@@ -211,14 +214,15 @@ def backup_skill(skill, directory):
 
 
 def validate_native_source(entry):
-    expected = f'{REPO}/skills/{NAME}'
-    routes = {'github': expected, 'skills.sh': f'skills-sh/{expected}',
-              'skills-sh': f'skills-sh/{expected}'}
+    prefixes = {'github': '', 'skills.sh': 'skills-sh/', 'skills-sh': 'skills-sh/'}
     source = entry.get('source')
-    if source not in routes or entry.get('identifier') != routes[source]:
+    if source not in prefixes or entry.get('identifier') not in {
+        f'{prefixes[source]}{repo}/skills/{NAME}' for repo in OFFICIAL_REPOS
+    }:
         raise ValueError('Native manager source identity mismatch')
     url = entry.get('metadata', {}).get('source_url', '')
-    pattern = rf'https://github\.com/{re.escape(REPO)}/tree/[0-9a-f]{{40}}/skills/{NAME}/?'
+    repos = '|'.join(re.escape(repo) for repo in OFFICIAL_REPOS)
+    pattern = rf'https://github\.com/(?:{repos})/tree/[0-9a-f]{{40}}/skills/{NAME}/?'
     if not re.fullmatch(pattern, url):
         raise ValueError('Native manager source URL is not this official pinned skill')
 

@@ -1,4 +1,4 @@
-# LDCodeStyleAgentSkill
+# LDAI_CodeStyleAgentSkill
 
 **`ld-codestyle-online` —— LD 人类与 Agent 协作编程技能的 GitHub 持续更新版。**
 
@@ -30,10 +30,12 @@ LD = **LastDream · 最后的梦**。官网：[lastdream.net](https://lastdream.
 复制这句话给你正在使用的 Agent，普通获取、接入和验证由它完成：
 
 ```text
-请阅读以下安装说明，为你当前的 Agent 环境安装 ld-codestyle-online，并验证主动检查更新可用：https://github.com/LastDreamTeam/LDCodeStyleAgentSkill/blob/main/skills/install.md
+请阅读以下安装说明，为你当前的 Agent 环境安装 ld-codestyle-online，并验证主动检查更新可用：https://github.com/LastDreamTeam/LDAI_CodeStyleAgentSkill/blob/main/skills/install.md
 ```
 
-**[打开 Agent 安装说明](skills/install.md)** · [纯文本入口](https://raw.githubusercontent.com/LastDreamTeam/LDCodeStyleAgentSkill/main/skills/install.md)
+**[打开 Agent 安装说明](skills/install.md)** · [纯文本入口](https://raw.githubusercontent.com/LastDreamTeam/LDAI_CodeStyleAgentSkill/main/skills/install.md)
+
+仓库已从 `LastDreamTeam/LDCodeStyleAgentSkill` 更名；技能名仍为 `ld-codestyle-online`。新安装使用新地址，旧安装的原地升级与偏好保留见[更名迁移](skills/ld-codestyle-online/references/maintenance.md#仓库更名兼容)。不要求换安装目录，也不另装一个同名技能。
 
 文档要求 Agent 识别当前宿主和作用域，获取官方最新版、安装完整技能、验证宿主发现及主动检查；不会替同一电脑上的其他 Agent 一起安装。Hermes 使用原生管理器；允许本地技能的其他宿主可用独立 Git 克隆＋本地目录/链接接入。只扔一份 `SKILL.md` 不算完整安装，也不会因此获得可用更新后端。
 
@@ -116,9 +118,19 @@ python -B scripts/maintain.py config --auto-update off
 
 不加 `【】`。问题/解决两节仍保留，并分别说明人类贡献与 Agent 本次改动；纯 Agent 改动继续用 `##模型：…`。历史无关标记不能让所有提交都挂人类名，也不能借混合署名扩大修改保护代码的权限。具体归属判断与首行生成器见[提交规范](skills/ld-codestyle-online/references/commit.md)。
 
+## 目录级共享记忆
+
+在一方模块的 Base 与配对接口所在控制区域，就近维护跨厂商 Agent 可共享的三份文档，作用于该目录及其子路径中的脚本与资产：
+
+- **`MEMORY.md`**：已核实的模块逻辑、业务意图、历史bug与根因、经验和坑点；不是某个Agent的私有记忆。
+- **`USER.md`**：用户提出的持久注意事项、关键要求、动态业务需求、用户角度的坑点，以及单独标明的未来设想；不收一次性修改指令。
+- **`README.md`**：区域总体总结、业务描述、目录职责和常用/复杂信息的快速指路，不复制全部细节。
+
+这些是脱敏的项目共有上下文，不导入Bot人格、凭据或私密会话。历史 `Readme.md` 保留为原有的人类资料，不因新规范而改写。考虑Windows等大小写不敏感环境，已有历史同名/大小写变体时不强建并存文件，采用明确标记父级作用域的 `AgentDocs/` 文档组；详见[规则、冲突处理与模板](skills/ld-codestyle-online/references/directory-context.md)。仅在授权写任务触及的区域维护，不安装后全仓铺文件。
+
 ## 版本与贡献
 
-技能名固定为 `ld-codestyle-online`，内部使用语义版本；当前为 **0.1.4**。见 [CHANGELOG.md](CHANGELOG.md)。更新不是通过改技能名为 v7、v8 来分发。
+技能名固定为 `ld-codestyle-online`，内部使用语义版本；当前为 **0.2.0**。见 [CHANGELOG.md](CHANGELOG.md)。更新不是通过改技能名为 v7、v8 来分发。
 
 欢迎以 Issue 或 PR 分享实践、问题和改进。贡献者应说明适用工程、真实收益、兼容风险与验证；不以单个工程的临时做法直接替代通用规则。贡献流程与三段式提交要求见 [CONTRIBUTING.md](CONTRIBUTING.md)。
 

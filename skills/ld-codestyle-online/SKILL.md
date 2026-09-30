@@ -1,7 +1,7 @@
 ---
 name: ld-codestyle-online
 description: "Use when adopting LD Unity or explicit OO governance."
-version: 0.1.4
+version: 0.2.0
 author: "LD (LastDream / 最后的梦), Hermes Agent"
 license: "CC-BY-SA-4.0; scripts: AGPL-3.0-only"
 platforms: [linux, macos, windows]
@@ -13,7 +13,7 @@ metadata:
 
 # LD CodeStyle Online
 
-让人类通过 Markdown、自然语言和小而清楚的代码契约表达创意、设计与边界；Agent 承接可替换的实现与验证。主要面向 Unity 重型开发，不是所有工程的强制模板。本在线版基于 LD v6 实践整理，独立版本 **0.1.4**，不与旧版叠加执行。
+让人类通过 Markdown、自然语言和小而清楚的代码契约表达创意、设计与边界；Agent 承接可替换的实现与验证。主要面向 Unity 重型开发，不是所有工程的强制模板。本在线版基于 LD v6 实践整理，独立版本 **0.2.0**，不与旧版叠加执行。
 
 本技能首先约束开发规范、习惯与风格，相对面向更多放权给 AI 的 Solo 开发者和希望减少代码失控的新手；不保证适合所有人，保障目标仍在完善、效果可能有限，不能代替测试和必要的人类判断。
 
@@ -26,6 +26,7 @@ metadata:
 ## 开工入口
 
 - 读 [协作契约](references/contract.md)；读最近 `AGENTS.md`、模块说明、真实 Git 分支/HEAD/脏状态以及目标 Base/接口和活跃实现。
+- 处理目标路径内的脚本或资产前，按[目录共享上下文](references/directory-context.md)读取适用的 `README.md` → `USER.md` → `MEMORY.md`；有冲突回核用户来源和真实代码，不把局部记忆升为全局权限。
 - Core 工作另读 [Agentic 模块索引](references/agentic.md)；索引是缓存，不高于源码、序列化契约和当前人类指令。
 - 使用终端工具运行 `python -B scripts/maintain.py show`（当前目录为本技能目录；或用脚本绝对路径），读取 `human_name`（默认 `LD`）及 `human_commit_name`（默认 `主人`）。两者分开，配置失败须报告，不覆盖损坏文件，也不猜用户设定。
 - **用户要求主动检查时**，按 [维护说明](references/maintenance.md)运行 `python -B scripts/maintain.py check --force`，即刻检查但不改动技能；即使自动更新已开启，单独的“检查”也不是更新授权。
@@ -37,7 +38,7 @@ metadata:
 
 - “把技能里的 LD/人类注释标识改为某某”指 `human_name`；“把 Commit 里的主人改为褪色的梦/我的网名”指 `human_commit_name`。后者只改未来混合提交的显示名，不连带改前者。
 - “检查周期改为N天”指 `interval_days`；“开启/关闭技能自动更新”指 `auto_update`。首次使用不强迫填写；用户没要求就保留默认。示例、引述和普通称呼不是修改授权。
-- 先用 `show` 定位当前安装和旧值，再按[README 参数设置](https://github.com/LastDreamTeam/LDCodeStyleAgentSkill#参数设置)中的唯一修改命令入口，最小修改并回读。自然语言已明确字段和新值时直接执行；“改人类名”等语境不明时只确认歧义项。
+- 先用 `show` 定位当前安装和旧值，再按[README 参数设置](https://github.com/LastDreamTeam/LDAI_CodeStyleAgentSkill#参数设置)中的唯一修改命令入口，最小修改并回读。自然语言已明确字段和新值时直接执行；“改人类名”等语境不明时只确认歧义项。
 - 只修改当前安装配置，不批量修改其他副本、源码标记、历史提交、版权来源、人格或 Git author/email。修改注释标识后旧 `LD:` 与已知人工标记仍受保护；配置损坏/非法值不得自行重置。此处只解释含义与安全边界，不重复参数修改命令。
 
 ## 人类与 Agent 的控制面
@@ -47,6 +48,14 @@ metadata:
 - **Agentic 是可识别、可替换的 AI 实现边界**，默认就近目录及 `.Agentic` 命名空间。Base、复合业务、临时及明确独立脚本可有合理例外，不为了格式制造空层。
 - Core 是带 Demo 的可提取零件库；允许随模块带走的单例工具、Model 集中入口，不提前强推 IoC、注册仪式或全面 UPM 化。
 - 常驻业务在编辑态可查看、装配和调整。按需并存便捷的 InstanceMode 与显式 PrefabMode，两者复用同一能力；常驻实例不能因访问单例又偷偷造一份。成品挂具体派生实现，不以 Base 充当成品。
+
+## 目录级共同记忆与用户意图
+
+- 在实际 Base/配对接口控制区域就近放 `MEMORY.md`、`USER.md`、`README.md`；目录不必字面叫Base，既可能是模块根也可能是Scripts。对本目录及后代的脚本、资源与资产生效，不扩及兄弟目录和其他工程。
+- `MEMORY.md`记录脱敏的共有事实、bug/根因、框架逻辑、业务意图与可复用经验；`USER.md`记录有来源的用户持久要求、动态业务需求、用户视角坑点和待探索设想；`README.md`只做区域总结、业务描述和快速索引。
+- 这是项目共享文档，不是当前Bot的Hermes核心记忆；不同厂商Agent可读可维护。用户要求与Agent推断分开，未来设想不自动变成执行授权，一次性指令不升格为永久规则。
+- 历史 `Readme.md` 默认是人类资料，**不覆盖、不改名、不自动改写**。Windows等环境会将它与 `README.md`视作同名；有冲突时使用[同一规范的AgentDocs兼容布局](references/directory-context.md)，不能在Linux上建两个大小写变体后让Windows无法检出。
+- 授权写任务中按实际增量维护触及区域；只读任务不建文档，不全仓补齐、不写流水账。模板、来源/状态字段、继承与过期处理见[详细规范](references/directory-context.md)。
 
 ## 注释归属
 
@@ -80,7 +89,7 @@ metadata:
 1. 核适用范围、需求和可验收结果；抓取当前工作树基线，不以旧记录当现场。
 2. 沿请求调用链读取所需契约/索引，先解决授权内目标；附近无关问题只作简短汇总，不扩成全仓审计。
 3. 复用当前有效模块；历史工程只提供行为参考，迁移不盲搬旧架构。不擅改插件、不直接手改 Unity 序列化场景/预制件，不覆盖人工未保存内容。
-4. 修改后检查配对接口、Base 扩展面、XML 文档、命名空间、插件边界、Inspector Tooltip、注释归属、模块索引及序列化兼容。
+4. 修改后检查配对接口、Base 扩展面、XML 文档、命名空间、插件边界、Inspector Tooltip、注释归属、模块索引及序列化兼容；有实际增量时同步适用的目录共享文档，保护历史Readme和已有meta身份。
 5. `.cs` 改动先用该终端可用的检查器过语法门禁，包含 `UNITY_EDITOR` 编译路径；缺依赖与语法错误分开，不假定某台机器私有脚本存在。
 6. 再做项目真实编译与最小可运行入口验证。画面/听音/交互分别实际核验；语法通过不等于 Unity 编译，通过编译不等于效果验收。
 7. 提交前逐项核 staged paths、人工改动、身份格式和真实验证边界。任何失败不写成 PASS，不清理脏文件来掩盖问题。

@@ -2,6 +2,8 @@
 
 `Agentic.md` 是 AI 维护、面向人类也可读的模块地图和工作缓存。当前人类指令、工程规则、真实代码/接口/序列化契约优先；索引过时不能反过来修改代码来迎合它。
 
+目录级 `MEMORY.md` / `USER.md` / `README.md` 另见[共享上下文规范](directory-context.md)。两者不互相替代：已有Agentic索引保留并按需指向就近三份文档；README作区域入口，MEMORY存经验，USER存用户意图，详细架构可仍落原索引。一个事实尽量只维护一个正文位置，其余用相对链接；不自动合并、删改历史Readme或既有Agentic文件。
+
 ## 放在哪里
 
 在已采用规范的一方 Core 根（如 `Assets/Core` 或 `Assets/LastDream/Core`）和有意义的类别/模块目录放索引。从根到目标模块顺序读取，再核对相关真实源码。
