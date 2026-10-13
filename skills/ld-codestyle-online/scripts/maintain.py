@@ -7,6 +7,7 @@ import json
 import os
 from pathlib import Path
 import re
+import socket
 import subprocess
 import tempfile
 import time
@@ -290,20 +291,40 @@ def synchronize(skill, directory, config, *, idle, force=False, approved=False, 
     return {**result, **receipt, 'status': 'updated', 'installed_version': after}
 
 
-def commit_header(config, model, bot, summary, *, mixed_human=False):
+def commit_header(config, model, bot, summary, *, mixed_human=False, client='',
+                  named_bot=False, computer_name=None):
     # OpenAI: Render an already-reviewed attribution decision; never guess authorship from a word match.
-    for value in (model, summary) + ((bot,) if bot else ()):
+    for value in (model, summary) + tuple(value for value in (bot, client) if value):
         if (not isinstance(value, str) or not value or not value.isprintable()
                 or value != value.strip() or '|' in value):
             raise ValueError('Commit fields must be non-empty single-line text without pipe delimiters')
-    if any(token in value for value in (model, bot or '')
-           for token in (' + ', '模型：', '##')):
-        raise ValueError('Bot/model must not contain extra header identity structure')
+    if any(token in value for value in (model, bot or '', client or '')
+           for token in (' + ', '模型：', '计算机：', '##')):
+        raise ValueError('Client/Bot/model must not contain extra header identity structure')
+    if bot and client:
+        raise ValueError('Choose a local client or a Bot identity, not both')
+    if named_bot:
+        # OpenAI: The flag attests a reviewed unique identity; familiar product/default names are not unique Bots.
+        default_names = {'ai', 'agent', 'assistant', 'bot', 'dot', 'hermes', 'hermesbot',
+                         'grok', 'grokbot', 'gpt', 'gptbot', 'gptdot', 'chatgpt', 'chatgptbot',
+                         'codex', 'openaicodex', 'claude', 'claudecode', 'cursor', 'vscode',
+                         'visualstudio', 'visualstudiocopilot', 'vscodecopilot', 'copilot',
+                         'githubcopilot', 'deepseekharness', 'otheragentplugin', '助手'}
+        normalized = re.sub(r'[\s_-]+', '', bot).casefold()
+        if not bot or client or normalized in default_names:
+            raise ValueError('named-bot requires a verified distinctive Bot name; default/local clients need a computer name')
+    machine = ''
+    if not named_bot or computer_name is not None:
+        actual = socket.gethostname() if computer_name is None else computer_name
+        if not isinstance(actual, str) or not re.fullmatch(r'[\w.-]{1,253}', actual):
+            raise ValueError('A real computer name is required; verify the execution host, do not invent a fallback')
+        machine = f'（计算机：{actual}）'
     name = config['human_commit_name']
     validate_commit_name(name)
     human = f'{name} + ' if mixed_human else ''
-    identity = f'{bot} + {model}' if bot else model
-    return f'##{human}模型：{identity} | {summary}'
+    actor = bot or client
+    identity = f'{actor} + {model}' if actor else model
+    return f'##{human}模型：{identity}{machine} | {summary}'
 
 
 def main():
@@ -314,7 +335,12 @@ def main():
     commands.add_parser('show')
     header = commands.add_parser('commit-header', help='Render a header; does not stage, commit, push or inspect Git')
     header.add_argument('--model', required=True)
-    header.add_argument('--bot', default='')
+    actor = header.add_mutually_exclusive_group()
+    actor.add_argument('--bot', default='')
+    actor.add_argument('--client', default='', help='Actual local Agent client, such as Codex or ClaudeCode')
+    header.add_argument('--named-bot', action='store_true',
+                        help='Caller verified a distinctive non-default Bot identity; may omit the computer name')
+    header.add_argument('--computer-name', help='Verified execution computer name; otherwise query this OS')
     header.add_argument('--summary', required=True)
     header.add_argument('--mixed-human', action='store_true',
                         help='Caller has verified human contribution in the staged change')
@@ -363,7 +389,8 @@ def main():
                                      force=args.force, approved=args.approve_update)
             elif args.command == 'commit-header':
                 result = {'header': commit_header(config, args.model, args.bot, args.summary,
-                                                  mixed_human=args.mixed_human)}
+                                                  mixed_human=args.mixed_human, client=args.client,
+                                                  named_bot=args.named_bot, computer_name=args.computer_name)}
             print(json.dumps({'data_dir': str(directory), 'config': config, **result}, ensure_ascii=False))
     except (OSError, ValueError, KeyError, TypeError, subprocess.TimeoutExpired) as exc:
         print(json.dumps({'status': 'error', 'error': str(exc)}, ensure_ascii=False))
