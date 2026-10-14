@@ -16,10 +16,63 @@ class DirectoryContextTests(unittest.TestCase):
         self.assertEqual(manifest['repository'], 'LastDreamTeam/LDAI_CodeStyleAgentSkill')
         self.assertIn('version: ' + manifest['version'], entry)
         self.assertIn('references/directory-context.md', entry)
-        for kind in ('memory', 'user', 'readme'):
+        for kind in ('memory', 'user', 'readme', 'debug'):
             path = SKILL/f'templates/module-{kind}.md'
             self.assertTrue(path.is_file())
             self.assertIn('作用域', path.read_text(encoding='utf-8'))
+
+    def test_agentic_memory_layout_keeps_logical_owner_at_readme_level(self):
+        spec = (SKILL/'references/directory-context.md').read_text(encoding='utf-8')
+        entry = (SKILL/'SKILL.md').read_text(encoding='utf-8')
+        for text in (spec, entry):
+            for required in ('Agentic/MEMORY.md', 'Agentic/USER.md', 'Agentic/DEBUG.md',
+                             'README 所在区域', '不扩大权限'):
+                self.assertIn(required, text)
+        for required in ('逻辑作用域', '物理存放', '跨区域索引', '单一有效正文',
+                         '不得把兄弟目录', 'AgentDocs/', '迁移'):
+            self.assertIn(required, spec)
+        for stale in ('三份文档与这些脚本同层', '在Base控制区同层建立三份'):
+            self.assertNotIn(stale, spec)
+        for kind in ('memory', 'user'):
+            template = (SKILL/f'templates/module-{kind}.md').read_text(encoding='utf-8')
+            self.assertIn('逻辑作用域', template)
+            self.assertIn('README 所在区域', template)
+            self.assertIn('Agentic/', template)
+        readme = (SKILL/'templates/module-readme.md').read_text(encoding='utf-8')
+        for required in ('共享记忆声明', 'Agentic/MEMORY.md', 'Agentic/USER.md',
+                         'Agentic/DEBUG.md', '同级区域上下文'):
+            self.assertIn(required, readme)
+
+    def test_debug_captures_user_workflow_and_post_delivery_verification(self):
+        template = SKILL/'templates/module-debug.md'
+        self.assertTrue(template.is_file(), 'Missing user-facing DEBUG workflow template')
+        text = template.read_text(encoding='utf-8')
+        for required in ('逻辑作用域', '用户原意', '前提', '步骤', '预期', '实际',
+                         '版本', '环境', '恢复', '未验', '推送后', '合并后'):
+            self.assertIn(required, text)
+        spec = (SKILL/'references/directory-context.md').read_text(encoding='utf-8')
+        for required in ('用户纠正', '流程修订', '推送后', '合并后', '未部署',
+                         '不自动授权', '不能为了测试通过', '测试数据'):
+            self.assertIn(required, spec)
+        for path in (SKILL/'SKILL.md', SKILL/'references/commit.md'):
+            entry = path.read_text(encoding='utf-8')
+            for required in ('DEBUG', '推送后', '合并后'):
+                self.assertIn(required, entry)
+
+    def test_all_memory_templates_record_dates_and_change_identity(self):
+        spec = (SKILL/'references/directory-context.md').read_text(encoding='utf-8')
+        for term in ('新增、修改、删除', '##模型：', '文件更新时间不等于验证日期',
+                     '历史日期未知', '条目标识', '删除摘要', '实际模型标识'):
+            self.assertIn(term, spec)
+        for kind in ('readme', 'memory', 'user', 'debug'):
+            text = (SKILL/f'templates/module-{kind}.md').read_text(encoding='utf-8')
+            with self.subTest(kind=kind):
+                for term in ('创建日期', '最近修改日期', '##模型：', '变更记录',
+                             '新增/修改/删除', '条目标识', '实际模型标识'):
+                    self.assertIn(term, text)
+        index = (SKILL/'references/agentic.md').read_text(encoding='utf-8')
+        for term in ('创建日期', '最近修改日期', '##模型：', '变更记录'):
+            self.assertIn(term, index)
 
     def test_markdown_relative_links_resolve(self):
         for path in ROOT.rglob('*.md'):
@@ -47,7 +100,7 @@ class DirectoryContextTests(unittest.TestCase):
 
     def test_cleanup_authority_is_explicit_in_entry_spec_and_templates(self):
         paths = [SKILL/'SKILL.md', SKILL/'references/directory-context.md',
-                 *(SKILL/f'templates/module-{kind}.md' for kind in ('memory', 'user', 'readme'))]
+                 *(SKILL/f'templates/module-{kind}.md' for kind in ('memory', 'user', 'readme', 'debug'))]
         for path in paths:
             text = path.read_text(encoding='utf-8')
             with self.subTest(path=path.name):
