@@ -137,7 +137,7 @@ Codex、ClaudeCode、Cursor、VSCode/Visual Studio Copilot、其他桌面/本地
     DEBUG.md                用户操作与正确测试流程
 ```
 
-- **`README.md`** 留在区域根，声明本区域有哪些共享记忆、由谁负责哪些路径和各文件入口；只做总体说明与索引。
+- **`README.md`** 留在原区域根，维持原本业务说明、职责与权威索引，不因记忆搬迁被替代或清空；新增MEMORY/USER/DEBUG等记忆索引。头部必须简述机制、同级逻辑scope及不可擅删/他用，让未安装本技能的Agent也能在本文件内读懂，而不是只给技能链接。
 - **`Agentic/MEMORY.md`**：模块逻辑、业务意图、历史bug与可能根因、经验和坑点的可核参考；区分观察与推论，不是某个Agent的私有记忆。
 - **`Agentic/USER.md`**：本区域持久要求、动态业务需求、用户痛点及单列的未来设想；准确保留用户原意，不把一次性任务升格为永久要求。
 - **`Agentic/DEBUG.md`**：从会话与开发中的用户描述/纠正持续维护正确操作和测试流程，包含前提、步骤、预期、实际结果、版本/环境、恢复与未验范围。
@@ -153,9 +153,9 @@ Codex、ClaudeCode、Cursor、VSCode/Visual Studio Copilot、其他桌面/本地
 
 **所有记忆类文件尽量带日期**，新增、修改、删除条目都在文内简记真实日期、条目标识、动作/原因和操作模型身份（沿用 Commit 的 `##模型：` 要求）；删除仍留简短摘要或替代索引。文件更新时间、用户提出日期、推送日期、实际验证日期分开，未知历史不补造。
 
-这些是脱敏的项目共有上下文，不导入Bot人格、凭据或私密会话。历史人类 `Readme.md` 默认保留，不制造仅大小写不同的并存文件。旧根目录 MEMORY/USER 或 `AgentDocs/` 布局按实际授权保全迁移到 Agentic，并由根 README 声明唯一正文；没有权限解决历史入口冲突时保留并报告缺口，不全仓自动搬迁、不复制双份权威。见[完整规则、兼容迁移与模板](skills/ld-codestyle-online/references/directory-context.md)。
+这些是脱敏的项目共有上下文，不导入Bot人格、凭据或私密会话。**采用本版后，范围内旧根目录、AgentDocs等位置的既有共享记忆也必须迁入所属区域Agentic，不是仅新建文件的可选布局。**仅存放位置改变，作用域不变，由原区域README声明唯一正文并保留原职责。历史人类 `Readme.md` 内容与大小写兼容仍受保护；真实冲突记“迁移未完成”及下一责任，解除后继续，不把旧位置当永久例外，不复制双份权威、不越出采用范围搬无关工程。见[完整规则、兼容迁移与模板](skills/ld-codestyle-online/references/directory-context.md)。
 
-本节修改记录：2026-10-15（Asia/Shanghai）；按 [Issue #2](https://github.com/LastDreamTeam/LDAI_CodeStyleAgentSkill/issues/2) 新增作用域/布局、DEBUG与日期身份约定；继承 #1 待审成熟度规则，不代表已发布。
+本节修改记录：2026-10-15（Asia/Shanghai）；按 [Issue #2](https://github.com/LastDreamTeam/LDAI_CodeStyleAgentSkill/issues/2) 新增作用域/布局、DEBUG与日期身份约定，并据用户补充明确既有文件必须迁移、README原职责保留及面向未安装Agent的头部说明；继承 #1 待审成熟度规则，不代表已发布。
 `##模型：列克星敦 + openai/gpt-6-astra | 补充目录共享记忆与用户流程回归`
 
 ## 版本与贡献

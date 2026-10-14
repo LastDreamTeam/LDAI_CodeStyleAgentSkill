@@ -74,6 +74,22 @@ class DirectoryContextTests(unittest.TestCase):
         for term in ('创建日期', '最近修改日期', '##模型：', '变更记录'):
             self.assertIn(term, index)
 
+    def test_existing_memories_migrate_and_readme_header_is_self_contained(self):
+        spec = (SKILL/'references/directory-context.md').read_text(encoding='utf-8')
+        entry = (SKILL/'SKILL.md').read_text(encoding='utf-8')
+        readme = (SKILL/'templates/module-readme.md').read_text(encoding='utf-8')
+        header = readme.split('## 业务与边界', 1)[0]
+        for text in (spec, entry):
+            for required in ('既有共享记忆也必须迁移', '不是仅新建文件',
+                             '未安装本技能', 'README原有职责与权威索引'):
+                self.assertIn(required, text)
+        for required in ('未安装本技能', 'README原有职责与权威索引',
+                         'Agentic/MEMORY.md', 'Agentic/USER.md', 'Agentic/DEBUG.md',
+                         '同级区域上下文', '不是临时文件', '不得擅自删除或改作他用'):
+            self.assertIn(required, header)
+        for required in ('不是可选布局', '迁移未完成', '责任人', '仅存放位置改变'):
+            self.assertIn(required, spec)
+
     def test_markdown_relative_links_resolve(self):
         for path in ROOT.rglob('*.md'):
             if '.git' in path.parts:
