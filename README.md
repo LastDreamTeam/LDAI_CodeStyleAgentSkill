@@ -188,7 +188,7 @@ Codex、ClaudeCode、Cursor、VSCode/Visual Studio Copilot、其他桌面/本地
 
 ## 版本与贡献
 
-技能名固定为 `ld-codestyle-online`，当前版本为 **0.3.0**（合并0.2.3提案，新的共享记忆布局按上述规则保全迁移）。见 [CHANGELOG.md](CHANGELOG.md) 与 [Release 包](https://github.com/LastDreamTeam/LDAI_CodeStyleAgentSkill/releases/tag/v0.3.0)。更新不是通过改技能名为 v7、v8 来分发；配置schema仍为1，原地升级保留偏好，自动更新默认关闭，运行中任务保持原规则版本。
+技能名固定为 `ld-codestyle-online`，当前版本为 **0.3.1**（含0.3.0治理整合及备份重名修复，新的共享记忆布局按上述规则保全迁移）。见 [CHANGELOG.md](CHANGELOG.md) 与 [Release 包](https://github.com/LastDreamTeam/LDAI_CodeStyleAgentSkill/releases/tag/v0.3.1)。更新不是通过改技能名为 v7、v8 来分发；配置schema仍为1，原地升级保留偏好，自动更新默认关闭，运行中任务保持原规则版本。
 
 Release ZIP用于允许文件包安装的宿主，不绕过原生管理器审批，也不具有Git fast-forward更新能力；现有Git/Hermes安装仍走原管理方式，不用ZIP覆盖。升级前内容可从 [legacy备份分支](https://github.com/LastDreamTeam/LDAI_CodeStyleAgentSkill/tree/legacy/main-20261016-6aa86d5) 核对。
 
