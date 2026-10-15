@@ -248,7 +248,7 @@ class InteractionCliTests(unittest.TestCase):
                     self.assertTrue(line,'Missing listening event')
                     ready=json.loads(line.decode('ascii'))
                     self.assertEqual(ready['event'],'local_question_ready')
-                    self.assertIn(str(data),ready['config_path'])
+                    self.assertTrue(Path(ready['config_path']).resolve().is_relative_to(data.resolve()))
                     url=urlsplit(ready['url']);token=parse_qs(url.fragment)['token'][0]
                     origin=f'{url.scheme}://{url.netloc}'
                     def post(path,payload):
