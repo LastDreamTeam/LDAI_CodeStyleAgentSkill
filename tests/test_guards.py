@@ -82,6 +82,40 @@ class Guards(unittest.TestCase):
                 with zipfile.ZipFile(archive) as z:
                     self.assertEqual(z.namelist(), ['SKILL.md'])
 
+    def test_backup_repeated_or_reversed_clock_keeps_latest_three_without_overwriting(self):
+        import zipfile
+        for clock in ([95] * 12, list(range(106, 94, -1))):
+            with self.subTest(clock=clock), tempfile.TemporaryDirectory() as tmp, \
+                    patch.object(m.time, 'time_ns', side_effect=clock):
+                root = Path(tmp)
+                data = root/'.ld-codestyle-data/schema-1'
+                (data/'backups').mkdir(parents=True)
+                (data/'config.json').write_text('private preferences')
+                manual = data/'backups/snapshot-human-note.zip'
+                manual.write_bytes(b'keep unrecognized file')
+                archives = []
+                original_bytes = {}
+                # OpenAI: Crossing a decimal width also checks numeric, not lexical, retention order.
+                for revision in range(12):
+                    (root/'SKILL.md').write_text(f'fixture revision {revision}')
+                    archive = Path(m.backup_skill(root, data))
+                    self.assertNotIn(archive, archives, 'Each snapshot must receive a fresh path')
+                    archives.append(archive)
+                    self.assertTrue(archive.is_file(), 'The returned new snapshot must survive rotation')
+                    original_bytes[archive] = archive.read_bytes()
+                    remaining = set((data/'backups').glob('snapshot-*.zip'))
+                    self.assertEqual(remaining, set(archives[-3:]) | {manual})
+                    self.assertEqual(manual.read_bytes(), b'keep unrecognized file')
+                    for retained in archives[-3:]:
+                        self.assertEqual(retained.read_bytes(), original_bytes[retained],
+                                         'A previous snapshot must not be overwritten')
+                        with zipfile.ZipFile(retained) as zipped:
+                            self.assertIsNone(zipped.testzip())
+                            self.assertEqual(zipped.namelist(), ['SKILL.md'])
+                            expected_revision = archives.index(retained)
+                            self.assertEqual(zipped.read('SKILL.md').decode(),
+                                             f'fixture revision {expected_revision}')
+
     def test_busy_sync_does_not_update_and_idle_reuses_pending(self):
         with tempfile.TemporaryDirectory() as tmp:
             skill = Path(tmp)/'skill'
