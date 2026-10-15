@@ -197,7 +197,7 @@ class CommitIdentityTests(unittest.TestCase):
 
     def test_configuration_edit_commands_are_centralized_in_readme(self):
         import re
-        pattern = r'config\s+--(?:human-name|human-commit-name|interval-days|auto-update)\b'
+        pattern = r'config\s+--(?:human-name|human-commit-name|interval-days|auto-update|interaction|answer-wait-minutes|idle-after-minutes)\b'
         offenders = [str(path.relative_to(ROOT)) for path in ROOT.rglob('*.md')
                      if path.name != 'README.md' and '.git' not in path.relative_to(ROOT).parts
                      and re.search(pattern, path.read_text(encoding='utf-8'))]

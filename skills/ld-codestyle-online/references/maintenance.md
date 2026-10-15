@@ -15,6 +15,7 @@ python -B scripts/maintain.py sync --idle
 可修改参数的命令集中在[README 参数设置](https://github.com/LastDreamTeam/LDAI_CodeStyleAgentSkill#参数设置)，这里仅说明读取、维护和安全行为。数据根等全局参数位于子命令之前，须与该安装已有调用方式一致。
 
 - `show`：读/初始化该实例配置并显示实际数据位置，无网络。
+- `interaction`是同一配置内的可选交互偏好，`show`同时显示真实`config_path`及解析后的开关、回答等待、可选空闲阈值。旧schema-1缺新字段沿默认且不丢旧值，非法类型/值拒绝写入。字段语义和命令见README；路由/超时续行见[交互规范](interaction.md)。当前HTML辅助不采全局键鼠，保存空闲阈值不等于开启监控；该偏好不是宿主审批或无人值守授权。
 - `human_name` 是人类注释标识，默认 `LD`；`human_commit_name` 是混合提交显示名，默认 `主人`。它们是独立偏好，不改技能正文、项目注释或 Git 身份；值约束和修改方式见 README。
 - `check`：只查官方 `main` 的版本清单，不更新技能。用户主动要求“检查更新”时用 `check --force` 即刻查询，不必等周期；无 `--force` 则按默认7天节流。记录尝试和成功两个时间，失败不冒充成功。即使 `auto_update=true`，此命令也只检查。
 - `sync --idle`：按周期检查，并执行更新策略。默认 `auto_update=false`，有新版返回 `update_confirmation_required`，由 Agent 提示用户是否更新，不调用更新后端；同一周期再调用返回 `not_due`，不反复催问。

@@ -18,6 +18,7 @@ REPO = 'LastDreamTeam/LDAI_CodeStyleAgentSkill'
 OFFICIAL_REPOS = (REPO, 'LastDreamTeam/LDCodeStyleAgentSkill')
 DEFAULTS = {'schema_version': 1, 'human_name': 'LD', 'human_commit_name': '主人',
             'interval_days': 7, 'auto_update': False}
+INTERACTION_DEFAULTS = {'enabled': True, 'answer_wait_minutes': 15, 'idle_after_minutes': 0}
 
 
 def load_json(path, default):
@@ -81,6 +82,20 @@ def validate_commit_name(value):
         raise ValueError('human_commit_name must be 1-40 visible characters without header delimiters')
 
 
+def interaction_config(config):
+    # OpenAI: Resolve additive preferences without rewriting legacy files or sharing defaults.
+    overrides = config.get('interaction', {})
+    if not isinstance(overrides, dict) or set(overrides) - set(INTERACTION_DEFAULTS):
+        raise ValueError('Invalid interaction settings')
+    result = {**INTERACTION_DEFAULTS, **overrides}
+    if type(result['enabled']) is not bool:
+        raise ValueError('interaction.enabled must be boolean')
+    for name, lower in (('answer_wait_minutes', 1), ('idle_after_minutes', 0)):
+        if type(result[name]) is not int or not lower <= result[name] <= 1440:
+            raise ValueError(f'interaction.{name} must be {lower}..1440 minutes')
+    return result
+
+
 def config_at(directory):
     config = load_json(directory / 'config.json', DEFAULTS)
     if config.get('schema_version') != 1:
@@ -97,6 +112,7 @@ def config_at(directory):
         raise ValueError('auto_update must be a boolean')
     config.setdefault('human_commit_name', '主人')
     validate_commit_name(config['human_commit_name'])
+    interaction_config(config)
     return config
 
 
@@ -349,6 +365,9 @@ def main():
     configure.add_argument('--human-commit-name')
     configure.add_argument('--interval-days', type=int)
     configure.add_argument('--auto-update', choices=('on', 'off'))
+    configure.add_argument('--interaction', choices=('on', 'off'))
+    configure.add_argument('--answer-wait-minutes', type=int)
+    configure.add_argument('--idle-after-minutes', type=int)
     for command in ('check', 'sync'):
         sub = commands.add_parser(command)
         sub.add_argument('--force', action='store_true', help='Bypass time interval only; never overwrite edits')
@@ -372,6 +391,17 @@ def main():
                     candidate['interval_days'] = args.interval_days
                 if args.auto_update is not None:
                     candidate['auto_update'] = args.auto_update == 'on'
+                if any(value is not None for value in (args.interaction, args.answer_wait_minutes,
+                                                       args.idle_after_minutes)):
+                    settings = interaction_config(candidate)
+                    if args.interaction is not None:
+                        settings['enabled'] = args.interaction == 'on'
+                    if args.answer_wait_minutes is not None:
+                        settings['answer_wait_minutes'] = args.answer_wait_minutes
+                    if args.idle_after_minutes is not None:
+                        settings['idle_after_minutes'] = args.idle_after_minutes
+                    candidate['interaction'] = settings
+                    interaction_config(candidate)
                 if not re.fullmatch(r'[\w\-\u4e00-\u9fff]{1,40}', candidate['human_name']):
                     raise ValueError('Invalid human name')
                 if not 1 <= candidate['interval_days'] <= 365:
@@ -391,7 +421,9 @@ def main():
                 result = {'header': commit_header(config, args.model, args.bot, args.summary,
                                                   mixed_human=args.mixed_human, client=args.client,
                                                   named_bot=args.named_bot, computer_name=args.computer_name)}
-            print(json.dumps({'data_dir': str(directory), 'config': config, **result}, ensure_ascii=False))
+            print(json.dumps({'data_dir': str(directory), 'config_path': str(directory/'config.json'),
+                              'config': config, 'interaction': interaction_config(config),
+                              **result}, ensure_ascii=False))
     except (OSError, ValueError, KeyError, TypeError, subprocess.TimeoutExpired) as exc:
         print(json.dumps({'status': 'error', 'error': str(exc)}, ensure_ascii=False))
         return 1
