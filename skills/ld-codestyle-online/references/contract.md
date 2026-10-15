@@ -34,6 +34,7 @@ Agentic 目录权限继承父模块，不能跨越接口、序列化或兄弟模
 - 模块内按需放 `Scripts`、`Resources`、变种和 Sample，不机械生成空目录。
 - Base/配对接口控制区的README声明本区域 `Agentic/MEMORY.md` / `Agentic/USER.md` / `Agentic/DEBUG.md` 等共享记忆。物理存放在Agentic，逻辑上等同README同级区域范围；不同区域正文不混杂，跨区只作路径索引。日期与条目修改身份、DEBUG的推送后/合并后实际回归、历史同层及 `AgentDocs/` 受控迁移见[目录记忆](directory-context.md)。历史人类Readme仍受保护，不制造大小写冲突。
 - README/MEMORY/USER/DEBUG及同类文件各自的头部须有自足的基础说明，不能只在README写一次或只放技能链接。直接打开任一文件的陌生Agent，也能知道职责、持久共享属性、实际scope与所属入口、读写维护和权限边界；旧文件在已授权采用/维护范围内补齐，保留有效正文、来源和meta，不借此接管人工资料。
+- 工作会话发现或用户反馈的复发缺陷，尤其Git历史曾修过时，先核旧提交/diff及适用版本；在已验证修复后更新区域MEMORY的发现、有效修复过程、验证与防复发经验。阶段性/番茄切片成功修复可记录并标剩余范围；不收未验证半途尝试或无价值废弃方案，不以记录经验代替修复，详见[修复经验闭环](directory-context.md#复发缺陷的修复经验闭环)。
 - `Agentic.md` 保留Core模块索引职责；与新README用链接分工，避免双份长期漂移，不自行删除或迁移旧文档。
 - 美术源资料是长期资产，不擅自清理。Git/LFS 门槛按实际远端限制检查，不默认忽略整份美术库。
 - 不因为插件“不整齐”就搬目录；核 GUID、asmdef、Resources、原生依赖后优先项目侧 wrapper/adapter，不改第三方原件。

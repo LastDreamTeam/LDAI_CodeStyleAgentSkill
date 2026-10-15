@@ -118,6 +118,29 @@ class DirectoryContextTests(unittest.TestCase):
                      '不得擅自删除或改作他用', '当前任务授权', '内容压缩'):
             self.assertIn(term, header)
 
+    def test_recurrent_bug_lessons_require_verified_repair_and_preserve_slices(self):
+        spec = (SKILL/'references/directory-context.md').read_text(encoding='utf-8')
+        section = spec.split('### 复发缺陷的修复经验闭环', 1)[-1].split('### USER.md', 1)[0]
+        self.assertIn('### 复发缺陷的修复经验闭环', spec)
+        for required in ('工作会话', '用户反馈', 'Git', '提交标题', 'diff',
+                         '已验证修复后', '同一条目', '修复中途', '废弃/放弃',
+                         '阶段性/番茄切片', '不必等待整项任务', '不等于长期稳定',
+                         '未知就标未知', '未完成', 'DEBUG', '不删除'):
+            with self.subTest(required=required):
+                self.assertIn(required, section)
+        template = (SKILL/'templates/module-memory.md').read_text(encoding='utf-8')
+        for required in ('复发缺陷', '已验证修复后', '阶段性/番茄切片',
+                         '历史修复', '发现与复现', '修复过程', '验证证据',
+                         '防复发', '未完成', '修复中途', '废弃/放弃'):
+            self.assertIn(required, template)
+        for path in (SKILL/'SKILL.md', SKILL/'references/contract.md'):
+            text = path.read_text(encoding='utf-8')
+            for required in ('复发缺陷', 'MEMORY', 'Git', '已验证修复后', '阶段性/番茄切片'):
+                self.assertIn(required, text)
+        example = spec.split('### 措辞与复核示例', 1)[-1].split('## 日期、修改身份', 1)[0]
+        self.assertIn('修复并验证后', example)
+        self.assertNotIn('本轮复现后，可能是保存快照捕获过晚', example)
+
     def test_markdown_relative_links_resolve(self):
         for path in ROOT.rglob('*.md'):
             if '.git' in path.parts:
