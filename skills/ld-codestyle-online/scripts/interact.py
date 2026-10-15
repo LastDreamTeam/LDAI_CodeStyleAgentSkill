@@ -8,6 +8,7 @@ import math
 from pathlib import Path
 import re
 import secrets
+from socketserver import TCPServer
 import threading
 import time
 from typing import cast
@@ -119,6 +120,11 @@ class QuestionServer(ThreadingHTTPServer):
         self.origin = f'http://127.0.0.1:{self.server_port}'
         self.host_header = f'127.0.0.1:{self.server_port}'
         self.timeout = 0.2
+
+    def server_bind(self):
+        # OpenAI: Numeric loopback needs no reverse DNS, which can exhaust the delivery deadline.
+        TCPServer.server_bind(self)
+        self.server_name, self.server_port = self.server_address[:2]
 
     def get_request(self):
         sock, address = super().get_request()

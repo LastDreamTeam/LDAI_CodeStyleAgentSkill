@@ -95,12 +95,23 @@ class QuestionStateTests(unittest.TestCase):
 
 
 class LocalTransportTests(unittest.TestCase):
+    def test_loopback_server_binding_never_resolves_hostnames(self):
+        from unittest.mock import patch
+        m=load()
+        session=m.QuestionSession(question(),60,5)
+        with patch('socket.getfqdn',side_effect=AssertionError('Loopback UI must not depend on DNS')):
+            with m.QuestionServer(session) as server:
+                self.assertEqual(server.server_name,'127.0.0.1')
+                self.assertGreater(server.server_port,0)
+                self.assertEqual(server.server_address,('127.0.0.1',server.server_port))
+
     def test_real_http_roundtrip_rejects_wrong_origin_token_and_session(self):
         import json
         import threading
         import urllib.request
         import urllib.error
         m=load()
+        opener=urllib.request.build_opener(urllib.request.ProxyHandler({}))
         self.assertTrue(hasattr(m,'QuestionServer'),'Missing loopback transport')
         s=m.QuestionSession(question(),60,5)
         server=m.QuestionServer(s)
@@ -108,12 +119,12 @@ class LocalTransportTests(unittest.TestCase):
         try:
             def get(path, token=server.token):
                 req=urllib.request.Request(server.origin+path,headers={'X-LD-Token':token})
-                return urllib.request.urlopen(req,timeout=3)
+                return opener.open(req,timeout=3)
             def post(path,payload,origin=None,token=None):
                 headers={'Content-Type':'application/json','Origin':origin or server.origin,
                          'X-LD-Token':server.token if token is None else token}
                 req=urllib.request.Request(server.origin+path,data=json.dumps(payload).encode(),headers=headers)
-                return urllib.request.urlopen(req,timeout=3)
+                return opener.open(req,timeout=3)
             with get('/') as response:
                 page=response.read().decode()
                 self.assertIn('自定义',page)
@@ -147,6 +158,7 @@ class LocalTransportTests(unittest.TestCase):
         import urllib.request
         import urllib.error
         m=load()
+        opener=urllib.request.build_opener(urllib.request.ProxyHandler({}))
         a=m.QuestionSession(question(),60,5)
         b=m.QuestionSession({**question(),'session_id':'session-b','revision':'r2'},60,5)
         servers=[m.QuestionServer(a),m.QuestionServer(b)]
@@ -156,7 +168,7 @@ class LocalTransportTests(unittest.TestCase):
             def post(server,path,payload,token):
                 req=urllib.request.Request(server.origin+path,data=json.dumps(payload).encode(),headers={
                     'Origin':server.origin,'X-LD-Token':token,'Content-Type':'application/json'})
-                with urllib.request.urlopen(req,timeout=3) as r:return json.load(r)
+                with opener.open(req,timeout=3) as r:return json.load(r)
             post(servers[0],'/ready',a.identity(),servers[0].token)
             post(servers[1],'/ready',b.identity(),servers[1].token)
             payload={**a.identity(),'action':'submitted','choice_id':'a','text':''}
@@ -233,6 +245,7 @@ class InteractionCliTests(unittest.TestCase):
         import tempfile
         import urllib.request
         from urllib.parse import urlsplit,parse_qs
+        opener=urllib.request.build_opener(urllib.request.ProxyHandler({}))
         answer='真实CLI协议测试 \U0001f9ea'
         for encoding in ('cp936','cp1252'):
             with self.subTest(encoding=encoding), tempfile.TemporaryDirectory() as td:
@@ -254,7 +267,7 @@ class InteractionCliTests(unittest.TestCase):
                     def post(path,payload):
                         req=urllib.request.Request(origin+path,data=json.dumps(payload).encode(),
                              headers={'Content-Type':'application/json','Origin':origin,'X-LD-Token':token})
-                        with urllib.request.urlopen(req,timeout=3) as response:return json.load(response)
+                        with opener.open(req,timeout=3) as response:return json.load(response)
                     ids={k:question()[k] for k in ('request_id','session_id','revision')}
                     post('/ready',ids)
                     post('/answer',{**ids,'action':'submitted','choice_id':'b','text':answer})
