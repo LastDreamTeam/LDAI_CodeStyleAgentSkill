@@ -125,6 +125,8 @@ class MaintenanceTests(unittest.TestCase):
                     args[args.index('origin')] = str(upstream)
                 return module.run(args, **kwargs)
             target = installed/'skills/ld-codestyle-online'
+            # OpenAI: Equivalent filesystem spellings must retain all updater guards.
+            module.update_git(target.parent/'..'/'skills'/'ld-codestyle-online', runner=runner)
             module.update_git(target, runner=runner)
             self.assertEqual((target/'SKILL.md').read_text(), 'fixture v2')
             (target/'SKILL.md').write_text('human local edit')

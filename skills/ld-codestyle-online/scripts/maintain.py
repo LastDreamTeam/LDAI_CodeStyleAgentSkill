@@ -169,6 +169,8 @@ def run(args, *, env=None):
 
 
 def update_git(skill, *, runner=run, before_apply=None):
+    # OpenAI: Compare physical paths consistently, including Windows 8.3 aliases.
+    skill = skill.resolve()
     repo = skill.parent.parent
     if skill.relative_to(repo).as_posix() != f'skills/{NAME}':
         raise ValueError('Not a supported Git installation layout')
