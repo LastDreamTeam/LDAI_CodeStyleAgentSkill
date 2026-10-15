@@ -90,6 +90,34 @@ class DirectoryContextTests(unittest.TestCase):
         for required in ('不是可选布局', '迁移未完成', '责任人', '仅存放位置改变'):
             self.assertIn(required, spec)
 
+    def test_each_file_header_stands_alone_for_an_unfamiliar_agent(self):
+        roles = {'readme': '区域地图', 'memory': '事实与经验',
+                 'user': '用户意图', 'debug': '操作与测试流程'}
+        for kind, role in roles.items():
+            text = (SKILL/f'templates/module-{kind}.md').read_text(encoding='utf-8')
+            header = text.split('\n## ', 1)[0]
+            with self.subTest(kind=kind):
+                for term in (role, '持久共享', '未安装本技能', '不在舰队或指挥系统',
+                             '不是临时文件', '私有记忆', '不得擅自删除或改作他用',
+                             '逻辑作用域', 'README', '当前任务授权', '先读',
+                             '九成以上把握', '内容压缩', '专门获授权',
+                             '日期', '实际模型', '来源', '不高于'):
+                    self.assertIn(term, header)
+                if kind != 'readme':
+                    self.assertIn('../README.md', header)
+                    self.assertIn('不只管Agentic', header)
+        spec = (SKILL/'references/directory-context.md').read_text(encoding='utf-8')
+        for term in ('每份文件头部', '不能只在 README', '旧文件', '保留有效正文',
+                     '独立打开', '只读任务', '陌生Agent'):
+            self.assertIn(term, spec)
+        entry = (SKILL/'SKILL.md').read_text(encoding='utf-8')
+        self.assertIn('每份文件头部', entry)
+        index = (SKILL/'references/agentic.md').read_text(encoding='utf-8')
+        header = index.split('```markdown\n', 1)[1].split('\n## ', 1)[0]
+        for term in ('持久共享', '逻辑作用域', 'README入口', '未安装本技能',
+                     '不得擅自删除或改作他用', '当前任务授权', '内容压缩'):
+            self.assertIn(term, header)
+
     def test_markdown_relative_links_resolve(self):
         for path in ROOT.rglob('*.md'):
             if '.git' in path.parts:
