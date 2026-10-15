@@ -421,11 +421,12 @@ def main():
                 result = {'header': commit_header(config, args.model, args.bot, args.summary,
                                                   mixed_human=args.mixed_human, client=args.client,
                                                   named_bot=args.named_bot, computer_name=args.computer_name)}
+            # OpenAI: ASCII JSON preserves Unicode values across legacy Windows console encodings.
             print(json.dumps({'data_dir': str(directory), 'config_path': str(directory/'config.json'),
                               'config': config, 'interaction': interaction_config(config),
-                              **result}, ensure_ascii=False))
+                              **result}, ensure_ascii=True))
     except (OSError, ValueError, KeyError, TypeError, subprocess.TimeoutExpired) as exc:
-        print(json.dumps({'status': 'error', 'error': str(exc)}, ensure_ascii=False))
+        print(json.dumps({'status': 'error', 'error': str(exc)}, ensure_ascii=True))
         return 1
     return 0
 

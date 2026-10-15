@@ -69,10 +69,12 @@ class InstallGuideTests(unittest.TestCase):
             dangling = root / 'dangling' / NAME
             dangling.parent.mkdir()
             dangling.symlink_to(root / 'absent', target_is_directory=True)
+            original_target = os.readlink(dangling)
             result = self.invoke(code, source, dangling)
             self.assertNotEqual(result.returncode, 0)
             self.assertTrue(dangling.is_symlink())
-            self.assertEqual(os.readlink(dangling), str(root/'absent'))
+            self.assertEqual(os.readlink(dangling), original_target)
+            self.assertEqual(dangling.resolve(), (root/'absent').resolve())
 
 
 if __name__ == '__main__':
