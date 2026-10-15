@@ -125,7 +125,7 @@ LD语境区分**工具类Agent**（Codex、Cursor、IDE AI插件、DeepSeekHarne
 - 提供方案/差别、推荐理由、自定义回答与取消/稍后；只问实质待决项，不抢焦点或重复刷问。明确无人值守直接按安全续行规则处理。
 - 等待默认15分钟可调，展示/未答/空闲分开。无人回答时收尾并列已自主决定的依据及回档办法、仍待裁决项；不把未决说成完成。
 
-完整角色定义、语义原文、配置范围、问询示例、本机辅助用法及限制见[交互询问与安全续行](skills/ld-codestyle-online/references/interaction.md)。附带标准库HTML辅助，**不是所有宿主原生弹窗已适配**；不安装后台服务，不自动监控键鼠、不跨终端转发，返回答案也不签发执行批准。当前仍待审，不因PR提交自动更新任何终端。
+完整角色定义、语义原文、配置范围、问询示例、本机辅助用法及限制见[交互询问与安全续行](skills/ld-codestyle-online/references/interaction.md)。附带标准库HTML辅助，**不是所有宿主原生弹窗已适配**；不安装后台服务，不自动监控键鼠、不跨终端转发，返回答案也不签发执行批准。发布不会自动更新任何终端；继续使用已有安装的更新策略。
 
 ### 人类与 Agent 混合贡献
 
@@ -181,12 +181,16 @@ Codex、ClaudeCode、Cursor、VSCode/Visual Studio Copilot、其他桌面/本地
 
 安装/更新技能不触发全机或全仓扫描；在已采用规范且本轮获授权写维护触及的责任区域，主动保全迁移旧记忆，无须逐文件重请，只读不搬、真实冲突仅暂停相关项并记未完成；读取时同时检查README声明入口与相关脚本附近旧位置，迁入Agentic后仍管辖README所属区域。
 
-本节修改记录：2026-10-15（Asia/Shanghai）；按 [Issue #2](https://github.com/LastDreamTeam/LDAI_CodeStyleAgentSkill/issues/2) 新增作用域/布局、DEBUG与日期身份约定，并据用户补充明确既有文件必须迁移、README原职责保留及每份文件独立可读的头部说明，不仅README；继承 #1 待审成熟度规则，不代表已发布。
+本节原提案记录：2026-10-15（Asia/Shanghai）；按 [Issue #2](https://github.com/LastDreamTeam/LDAI_CodeStyleAgentSkill/issues/2) 新增作用域/布局、DEBUG与日期身份约定，并据用户补充明确既有文件必须迁移、README原职责保留及每份文件独立可读的头部说明，不仅README；继承 #1 的成熟度规则，随0.3.0统一发布。
 `##模型：列克星敦 + openai/gpt-6-astra | 补充目录共享记忆与用户流程回归`
+
+2026-10-16统一审查补充：在已授权写维护触及的责任区域主动迁移旧记忆，并同时检查README入口和脚本附近旧位置。Codex + GPT-6；原提案与审查归属保留。
 
 ## 版本与贡献
 
-技能名固定为 `ld-codestyle-online`，内部使用语义版本；本分支为 **0.3.0 待审提案，尚未发布**（继承 #1 的0.2.3提案，新的共享记忆布局需要受控迁移）。见 [CHANGELOG.md](CHANGELOG.md)。更新不是通过改技能名为 v7、v8 来分发；本PR不触发安装实例更新。
+技能名固定为 `ld-codestyle-online`，当前版本为 **0.3.0**（合并0.2.3提案，新的共享记忆布局按上述规则保全迁移）。见 [CHANGELOG.md](CHANGELOG.md) 与 [Release 包](https://github.com/LastDreamTeam/LDAI_CodeStyleAgentSkill/releases/tag/v0.3.0)。更新不是通过改技能名为 v7、v8 来分发；配置schema仍为1，原地升级保留偏好，自动更新默认关闭，运行中任务保持原规则版本。
+
+Release ZIP用于允许文件包安装的宿主，不绕过原生管理器审批，也不具有Git fast-forward更新能力；现有Git/Hermes安装仍走原管理方式，不用ZIP覆盖。升级前内容可从 [legacy备份分支](https://github.com/LastDreamTeam/LDAI_CodeStyleAgentSkill/tree/legacy/main-20261016-6aa86d5) 核对。
 
 欢迎以 Issue 或 PR 分享实践、问题和改进。贡献者应说明适用工程、真实收益、兼容风险与验证；不以单个工程的临时做法直接替代通用规则。贡献流程与三段式提交要求见 [CONTRIBUTING.md](CONTRIBUTING.md)。
 

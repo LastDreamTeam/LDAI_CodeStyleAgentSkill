@@ -4,6 +4,8 @@
 
 需要 Python 3.10+；Git 克隆更新另需 Git，Hermes 安装使用当前环境的 `hermes` 命令。没有 Python 时规范仍可阅读，但脚本未运行就不能声称已自动检查或更新。
 
+维护与交互CLI的机器stdout使用ASCII转义JSON；调用方先解析JSON再显示中文等Unicode值，不把转义文本当数据丢失。磁盘配置与HTTP仍为UTF-8，此输出约定避免Windows传统代码页破坏管道传输。
+
 命令在本技能目录运行；通过 Agent 的终端工具调用（Hermes 使用 `terminal`）。Windows 若只有 Python Launcher，可用 `py -3` 替换 `python`，先确认其版本。
 
 ```sh
