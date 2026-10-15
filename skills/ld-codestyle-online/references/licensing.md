@@ -3,7 +3,7 @@
 本仓库不是双许可任选：
 
 - `*.md`、元数据（包括 `assets/version.json`）及其他非代码文档：CC BY-SA 4.0。
-- `*.py`、其他实际代码/可执行脚本、测试及构建/CI 配置：AGPL-3.0-only。
+- `*.py`、其他实际代码/可执行脚本、测试及构建/CI 配置：AGPL-3.0-only；包含可运行询问界面的`assets/question.html`、`assets/question.js`，其文件头有明确SPDX标识。`templates/question.example.json`为说明格式的示例文档，随文档CC BY-SA 4.0。
 - 文档内用于说明规范的短代码片段随文档 CC BY-SA 4.0；若直接复制且构成受保护表达，需遵循适用许可，而非声称所有生成物自动无条件豁免。
 - 标准许可证原文本身按其原始发布条件保留，不附加 LD 限制；另有明确第三方许可标记的内容遵循原许可。
 

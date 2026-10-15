@@ -1,0 +1,18 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<!-- OpenAI: A local question form; all supplied content is rendered as text. -->
+<html lang="zh-CN">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LD · 待决问题</title><script src="/app.js" defer></script></head>
+<body><main>
+<h1 id="title">LD · 待决问题</h1>
+<p id="identity"></p><p id="question"></p>
+<p>请选方案或自定义输入；推荐不代表已同意。关闭页面不等于批准。</p>
+<form id="form"><fieldset id="options"><legend>可选方案</legend></fieldset>
+<p><label for="custom">自定义回答／补充</label><br><textarea id="custom" rows="5" cols="60" maxlength="8000"></textarea></p>
+<button id="submit" type="submit" disabled>确认回答</button>
+<button id="later" type="button" disabled>稍后决定</button>
+<button id="cancel" type="button" disabled>取消本次询问</button></form>
+<p id="status" role="status">正在连接本机询问服务……</p>
+<p>本页仅收集回答，不执行方案、不替代宿主审批；无需输入密码或密钥。</p>
+</main></body></html>

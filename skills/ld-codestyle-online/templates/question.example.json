@@ -1,0 +1,12 @@
+{
+  "request_id": "example-question-1",
+  "session_id": "replace-with-real-session-id",
+  "revision": "r1",
+  "title": "示例：当前模块的实现取舍",
+  "question": "仅为格式示例，实际调用前替换：采用最小改动，还是扩大本次范围？",
+  "options": [
+    {"id": "minimal", "label": "最小改动", "detail": "优先完成已授权目标，保留可恢复原状。"},
+    {"id": "broader", "label": "讨论扩大范围", "detail": "先确认影响与新授权，选中不自动执行额外改造。"}
+  ],
+  "recommended_id": "minimal"
+}

@@ -69,10 +69,15 @@ class InstallGuideTests(unittest.TestCase):
             dangling = root / 'dangling' / NAME
             dangling.parent.mkdir()
             dangling.symlink_to(root / 'absent', target_is_directory=True)
+            original_target = os.readlink(dangling)
             result = self.invoke(code, source, dangling)
             self.assertNotEqual(result.returncode, 0)
             self.assertTrue(dangling.is_symlink())
-            self.assertEqual(os.readlink(dangling), str(root/'absent'))
+            self.assertEqual(os.readlink(dangling), original_target)
+            # OpenAI: A missing leaf cannot normalize Windows 8.3 aliases by itself.
+            self.assertTrue(dangling.resolve().parent.samefile(root))
+            self.assertEqual(dangling.resolve().name, 'absent')
+            self.assertFalse(dangling.exists())
 
 
 if __name__ == '__main__':

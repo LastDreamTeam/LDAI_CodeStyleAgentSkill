@@ -7,6 +7,7 @@ import json
 import os
 from pathlib import Path
 import re
+import socket
 import subprocess
 import tempfile
 import time
@@ -17,6 +18,7 @@ REPO = 'LastDreamTeam/LDAI_CodeStyleAgentSkill'
 OFFICIAL_REPOS = (REPO, 'LastDreamTeam/LDCodeStyleAgentSkill')
 DEFAULTS = {'schema_version': 1, 'human_name': 'LD', 'human_commit_name': '主人',
             'interval_days': 7, 'auto_update': False}
+INTERACTION_DEFAULTS = {'enabled': True, 'answer_wait_minutes': 15, 'idle_after_minutes': 0}
 
 
 def load_json(path, default):
@@ -80,6 +82,20 @@ def validate_commit_name(value):
         raise ValueError('human_commit_name must be 1-40 visible characters without header delimiters')
 
 
+def interaction_config(config):
+    # OpenAI: Resolve additive preferences without rewriting legacy files or sharing defaults.
+    overrides = config.get('interaction', {})
+    if not isinstance(overrides, dict) or set(overrides) - set(INTERACTION_DEFAULTS):
+        raise ValueError('Invalid interaction settings')
+    result = {**INTERACTION_DEFAULTS, **overrides}
+    if type(result['enabled']) is not bool:
+        raise ValueError('interaction.enabled must be boolean')
+    for name, lower in (('answer_wait_minutes', 1), ('idle_after_minutes', 0)):
+        if type(result[name]) is not int or not lower <= result[name] <= 1440:
+            raise ValueError(f'interaction.{name} must be {lower}..1440 minutes')
+    return result
+
+
 def config_at(directory):
     config = load_json(directory / 'config.json', DEFAULTS)
     if config.get('schema_version') != 1:
@@ -96,6 +112,7 @@ def config_at(directory):
         raise ValueError('auto_update must be a boolean')
     config.setdefault('human_commit_name', '主人')
     validate_commit_name(config['human_commit_name'])
+    interaction_config(config)
     return config
 
 
@@ -152,6 +169,8 @@ def run(args, *, env=None):
 
 
 def update_git(skill, *, runner=run, before_apply=None):
+    # OpenAI: Compare physical paths consistently, including Windows 8.3 aliases.
+    skill = skill.resolve()
     repo = skill.parent.parent
     if skill.relative_to(repo).as_posix() != f'skills/{NAME}':
         raise ValueError('Not a supported Git installation layout')
@@ -290,20 +309,40 @@ def synchronize(skill, directory, config, *, idle, force=False, approved=False, 
     return {**result, **receipt, 'status': 'updated', 'installed_version': after}
 
 
-def commit_header(config, model, bot, summary, *, mixed_human=False):
+def commit_header(config, model, bot, summary, *, mixed_human=False, client='',
+                  named_bot=False, computer_name=None):
     # OpenAI: Render an already-reviewed attribution decision; never guess authorship from a word match.
-    for value in (model, summary) + ((bot,) if bot else ()):
+    for value in (model, summary) + tuple(value for value in (bot, client) if value):
         if (not isinstance(value, str) or not value or not value.isprintable()
                 or value != value.strip() or '|' in value):
             raise ValueError('Commit fields must be non-empty single-line text without pipe delimiters')
-    if any(token in value for value in (model, bot or '')
-           for token in (' + ', '模型：', '##')):
-        raise ValueError('Bot/model must not contain extra header identity structure')
+    if any(token in value for value in (model, bot or '', client or '')
+           for token in (' + ', '模型：', '计算机：', '##')):
+        raise ValueError('Client/Bot/model must not contain extra header identity structure')
+    if bot and client:
+        raise ValueError('Choose a local client or a Bot identity, not both')
+    if named_bot:
+        # OpenAI: The flag attests a reviewed unique identity; familiar product/default names are not unique Bots.
+        default_names = {'ai', 'agent', 'assistant', 'bot', 'dot', 'hermes', 'hermesbot',
+                         'grok', 'grokbot', 'gpt', 'gptbot', 'gptdot', 'chatgpt', 'chatgptbot',
+                         'codex', 'openaicodex', 'claude', 'claudecode', 'cursor', 'vscode',
+                         'visualstudio', 'visualstudiocopilot', 'vscodecopilot', 'copilot',
+                         'githubcopilot', 'deepseekharness', 'otheragentplugin', '助手'}
+        normalized = re.sub(r'[\s_-]+', '', bot).casefold()
+        if not bot or client or normalized in default_names:
+            raise ValueError('named-bot requires a verified distinctive Bot name; default/local clients need a computer name')
+    machine = ''
+    if not named_bot or computer_name is not None:
+        actual = socket.gethostname() if computer_name is None else computer_name
+        if not isinstance(actual, str) or not re.fullmatch(r'[\w.-]{1,253}', actual):
+            raise ValueError('A real computer name is required; verify the execution host, do not invent a fallback')
+        machine = f'（计算机：{actual}）'
     name = config['human_commit_name']
     validate_commit_name(name)
     human = f'{name} + ' if mixed_human else ''
-    identity = f'{bot} + {model}' if bot else model
-    return f'##{human}模型：{identity} | {summary}'
+    actor = bot or client
+    identity = f'{actor} + {model}' if actor else model
+    return f'##{human}模型：{identity}{machine} | {summary}'
 
 
 def main():
@@ -314,7 +353,12 @@ def main():
     commands.add_parser('show')
     header = commands.add_parser('commit-header', help='Render a header; does not stage, commit, push or inspect Git')
     header.add_argument('--model', required=True)
-    header.add_argument('--bot', default='')
+    actor = header.add_mutually_exclusive_group()
+    actor.add_argument('--bot', default='')
+    actor.add_argument('--client', default='', help='Actual local Agent client, such as Codex or ClaudeCode')
+    header.add_argument('--named-bot', action='store_true',
+                        help='Caller verified a distinctive non-default Bot identity; may omit the computer name')
+    header.add_argument('--computer-name', help='Verified execution computer name; otherwise query this OS')
     header.add_argument('--summary', required=True)
     header.add_argument('--mixed-human', action='store_true',
                         help='Caller has verified human contribution in the staged change')
@@ -323,6 +367,9 @@ def main():
     configure.add_argument('--human-commit-name')
     configure.add_argument('--interval-days', type=int)
     configure.add_argument('--auto-update', choices=('on', 'off'))
+    configure.add_argument('--interaction', choices=('on', 'off'))
+    configure.add_argument('--answer-wait-minutes', type=int)
+    configure.add_argument('--idle-after-minutes', type=int)
     for command in ('check', 'sync'):
         sub = commands.add_parser(command)
         sub.add_argument('--force', action='store_true', help='Bypass time interval only; never overwrite edits')
@@ -346,6 +393,17 @@ def main():
                     candidate['interval_days'] = args.interval_days
                 if args.auto_update is not None:
                     candidate['auto_update'] = args.auto_update == 'on'
+                if any(value is not None for value in (args.interaction, args.answer_wait_minutes,
+                                                       args.idle_after_minutes)):
+                    settings = interaction_config(candidate)
+                    if args.interaction is not None:
+                        settings['enabled'] = args.interaction == 'on'
+                    if args.answer_wait_minutes is not None:
+                        settings['answer_wait_minutes'] = args.answer_wait_minutes
+                    if args.idle_after_minutes is not None:
+                        settings['idle_after_minutes'] = args.idle_after_minutes
+                    candidate['interaction'] = settings
+                    interaction_config(candidate)
                 if not re.fullmatch(r'[\w\-\u4e00-\u9fff]{1,40}', candidate['human_name']):
                     raise ValueError('Invalid human name')
                 if not 1 <= candidate['interval_days'] <= 365:
@@ -363,10 +421,14 @@ def main():
                                      force=args.force, approved=args.approve_update)
             elif args.command == 'commit-header':
                 result = {'header': commit_header(config, args.model, args.bot, args.summary,
-                                                  mixed_human=args.mixed_human)}
-            print(json.dumps({'data_dir': str(directory), 'config': config, **result}, ensure_ascii=False))
+                                                  mixed_human=args.mixed_human, client=args.client,
+                                                  named_bot=args.named_bot, computer_name=args.computer_name)}
+            # OpenAI: ASCII JSON preserves Unicode values across legacy Windows console encodings.
+            print(json.dumps({'data_dir': str(directory), 'config_path': str(directory/'config.json'),
+                              'config': config, 'interaction': interaction_config(config),
+                              **result}, ensure_ascii=True))
     except (OSError, ValueError, KeyError, TypeError, subprocess.TimeoutExpired) as exc:
-        print(json.dumps({'status': 'error', 'error': str(exc)}, ensure_ascii=False))
+        print(json.dumps({'status': 'error', 'error': str(exc)}, ensure_ascii=True))
         return 1
     return 0
 
