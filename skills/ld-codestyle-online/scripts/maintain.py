@@ -207,8 +207,25 @@ def backup_skill(skill, directory):
     import zipfile
     backups = directory / 'backups'
     backups.mkdir(exist_ok=True, mode=0o700)
-    target = backups / f'snapshot-{time.time_ns()}.zip'
-    with zipfile.ZipFile(target, 'x', compression=zipfile.ZIP_DEFLATED) as out:
+    def ordered_snapshots():
+        # OpenAI: Preserve unrelated files and order legacy numeric names without lexical ambiguity.
+        return sorted((path for path in backups.glob('snapshot-*.zip')
+                       if re.fullmatch(r'snapshot-[0-9]+\.zip', path.name)),
+                      key=lambda path: int(path.stem.removeprefix('snapshot-')))
+    existing = ordered_snapshots()
+    sequence = max(time.time_ns(),
+                   int(existing[-1].stem.removeprefix('snapshot-')) + 1 if existing else 0)
+    # OpenAI: Coarse or reversed clocks must not reuse names; exclusive creation handles contention.
+    for _ in range(100):
+        target = backups / f'snapshot-{sequence}.zip'
+        try:
+            archive = zipfile.ZipFile(target, 'x', compression=zipfile.ZIP_DEFLATED)
+            break
+        except FileExistsError:
+            sequence += 1
+    else:
+        raise FileExistsError('Could not reserve a unique snapshot after 100 attempts; old snapshots retained')
+    with archive as out:
         for path in sorted(skill.rglob('*')):
             if path.is_relative_to(directory) or '.ld-codestyle-data' in path.relative_to(skill).parts:
                 continue
@@ -227,7 +244,7 @@ def backup_skill(skill, directory):
     with zipfile.ZipFile(target) as verify:
         if verify.testzip() is not None:
             raise ValueError('Snapshot verification failed; old snapshots retained')
-    for old in sorted(backups.glob('snapshot-*.zip'))[:-3]:
+    for old in [path for path in ordered_snapshots() if path != target][:-2]:
         old.unlink()
     return str(target)
 
