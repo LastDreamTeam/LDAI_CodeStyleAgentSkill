@@ -179,6 +179,8 @@ Codex、ClaudeCode、Cursor、VSCode/Visual Studio Copilot、其他桌面/本地
 
 这些是脱敏的项目共有上下文，不导入Bot人格、凭据或私密会话。**采用本版后，范围内旧根目录、AgentDocs等位置的既有共享记忆也必须迁入所属区域Agentic，不是仅新建文件的可选布局。**仅存放位置改变，作用域不变，由原区域README声明唯一正文并保留原职责。历史人类 `Readme.md` 内容与大小写兼容仍受保护；真实冲突记“迁移未完成”及下一责任，解除后继续，不把旧位置当永久例外，不复制双份权威、不越出采用范围搬无关工程。见[完整规则、兼容迁移与模板](skills/ld-codestyle-online/references/directory-context.md)。
 
+安装/更新技能不触发全机或全仓扫描；在已采用规范且本轮获授权写维护触及的责任区域，主动保全迁移旧记忆，无须逐文件重请，只读不搬、真实冲突仅暂停相关项并记未完成；读取时同时检查README声明入口与相关脚本附近旧位置，迁入Agentic后仍管辖README所属区域。
+
 本节修改记录：2026-10-15（Asia/Shanghai）；按 [Issue #2](https://github.com/LastDreamTeam/LDAI_CodeStyleAgentSkill/issues/2) 新增作用域/布局、DEBUG与日期身份约定，并据用户补充明确既有文件必须迁移、README原职责保留及每份文件独立可读的头部说明，不仅README；继承 #1 待审成熟度规则，不代表已发布。
 `##模型：列克星敦 + openai/gpt-6-astra | 补充目录共享记忆与用户流程回归`
 
