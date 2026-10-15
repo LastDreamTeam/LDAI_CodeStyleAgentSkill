@@ -226,40 +226,48 @@ class InteractionCliTests(unittest.TestCase):
                 if p.poll() is None:p.terminate()
                 p.communicate(timeout=5)
 
-    def test_real_cli_question_and_answer_roundtrip(self):
+    def test_real_cli_question_and_unicode_answer_roundtrip_across_output_encodings(self):
         import json
+        import os
         import subprocess
         import tempfile
         import urllib.request
         from urllib.parse import urlsplit,parse_qs
-        with tempfile.TemporaryDirectory() as td:
-            root=Path(td);q=root/'q.json';q.write_text(json.dumps(question()),encoding='utf-8')
-            cmd=[sys.executable,'-B',str(SCRIPTS/'interact.py'),'--data-root',str(root/'data'),
-                 '--actor','tool-agent','--local-ui-allowed','--question',str(q),'--delivery-seconds','3']
-            p=subprocess.Popen(cmd,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,encoding='utf-8')
-            try:
-                assert p.stdout is not None
-                line=p.stdout.readline()
-                self.assertTrue(line,'Missing listening event')
-                ready=json.loads(line);self.assertEqual(ready['event'],'local_question_ready')
-                url=urlsplit(ready['url']);token=parse_qs(url.fragment)['token'][0]
-                origin=f'{url.scheme}://{url.netloc}'
-                def post(path,payload):
-                    req=urllib.request.Request(origin+path,data=json.dumps(payload).encode(),
-                         headers={'Content-Type':'application/json','Origin':origin,'X-LD-Token':token})
-                    with urllib.request.urlopen(req,timeout=3) as response:return json.load(response)
-                ids={k:question()[k] for k in ('request_id','session_id','revision')}
-                post('/ready',ids)
-                post('/answer',{**ids,'action':'submitted','choice_id':'b','text':'真实CLI协议测试'})
-                out,err=p.communicate(timeout=5);self.assertEqual(p.returncode,0,err)
-                result=json.loads(out)
-                self.assertEqual(result['outcome'],'submitted')
-                self.assertEqual(result['choice_id'],'b')
-                self.assertFalse(result['user_approved'])
-                self.assertEqual(result['idle_detection'],'unsupported_not_observed')
-            finally:
-                if p.poll() is None:p.terminate()
-                p.communicate(timeout=5)
+        answer='真实CLI协议测试 \U0001f9ea'
+        for encoding in ('cp936','cp1252'):
+            with self.subTest(encoding=encoding), tempfile.TemporaryDirectory() as td:
+                root=Path(td);q=root/'q.json';q.write_text(json.dumps(question()),encoding='utf-8')
+                data=root/'中文配置'
+                cmd=[sys.executable,'-B',str(SCRIPTS/'interact.py'),'--data-root',str(data),
+                     '--actor','tool-agent','--local-ui-allowed','--question',str(q),'--delivery-seconds','3']
+                env={**os.environ,'PYTHONIOENCODING':encoding}
+                p=subprocess.Popen(cmd,stdout=subprocess.PIPE,stderr=subprocess.PIPE,env=env)
+                try:
+                    assert p.stdout is not None
+                    line=p.stdout.readline()
+                    self.assertTrue(line,'Missing listening event')
+                    ready=json.loads(line.decode('ascii'))
+                    self.assertEqual(ready['event'],'local_question_ready')
+                    self.assertIn(str(data),ready['config_path'])
+                    url=urlsplit(ready['url']);token=parse_qs(url.fragment)['token'][0]
+                    origin=f'{url.scheme}://{url.netloc}'
+                    def post(path,payload):
+                        req=urllib.request.Request(origin+path,data=json.dumps(payload).encode(),
+                             headers={'Content-Type':'application/json','Origin':origin,'X-LD-Token':token})
+                        with urllib.request.urlopen(req,timeout=3) as response:return json.load(response)
+                    ids={k:question()[k] for k in ('request_id','session_id','revision')}
+                    post('/ready',ids)
+                    post('/answer',{**ids,'action':'submitted','choice_id':'b','text':answer})
+                    out,err=p.communicate(timeout=5);self.assertEqual(p.returncode,0,err)
+                    result=json.loads(out.decode('ascii'))
+                    self.assertEqual(result['outcome'],'submitted')
+                    self.assertEqual(result['choice_id'],'b')
+                    self.assertEqual(result['text'],answer)
+                    self.assertFalse(result['user_approved'])
+                    self.assertEqual(result['idle_detection'],'unsupported_not_observed')
+                finally:
+                    if p.poll() is None:p.terminate()
+                    p.communicate(timeout=5)
 
 
 if __name__=='__main__':

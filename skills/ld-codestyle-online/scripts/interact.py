@@ -330,8 +330,9 @@ def main():
         outcome = ('unattended' if args.unattended else 'disabled' if not settings['enabled'] else
                    'channel_required' if args.actor == 'bot' else 'native_required' if args.native_available else
                    'local_ui_not_allowed' if not args.local_ui_allowed else None)
+        # OpenAI: ASCII JSON preserves Unicode values across locale-dependent subprocess pipes.
         if outcome:
-            print(json.dumps(result_with_assessment(session.finish(outcome), metadata, assessment), ensure_ascii=False))
+            print(json.dumps(result_with_assessment(session.finish(outcome), metadata, assessment), ensure_ascii=True))
             return 0
         key = hashlib.sha256((question['session_id'] + '\n' + question['request_id']).encode()).hexdigest()
         # OpenAI: Lock only this question, not all maintenance or unrelated concurrent work.
@@ -339,7 +340,7 @@ def main():
             with QuestionServer(session) as server:
                 url = server.origin + '/#token=' + server.token
                 print(json.dumps({'event': 'local_question_ready', 'url': url,
-                                  **session.identity(), **metadata}, ensure_ascii=False), flush=True)
+                                  **session.identity(), **metadata}, ensure_ascii=True), flush=True)
                 if args.open_browser:
                     try:
                         subprocess.run([sys.executable, '-m', 'webbrowser', '-t', url],
@@ -356,24 +357,24 @@ def main():
                 except KeyboardInterrupt:
                     with server.guard:
                         result = session.finish('aborted', reason='Caller interrupted; not a user answer')
-                print(json.dumps(result_with_assessment(result, metadata, assessment), ensure_ascii=False), flush=True)
+                print(json.dumps(result_with_assessment(result, metadata, assessment), ensure_ascii=True), flush=True)
         return 0
     except KeyboardInterrupt:
         result = session.finish('aborted', reason='Caller interrupted; reconcile original state') if session else {'outcome': 'aborted'}
-        print(json.dumps(result_with_assessment(result, metadata, assessment), ensure_ascii=False), flush=True)
+        print(json.dumps(result_with_assessment(result, metadata, assessment), ensure_ascii=True), flush=True)
         return 0
     except FileExistsError as exc:
         result = {'outcome': 'question_locked', 'error': str(exc),
                   'reason': 'Existing question lock; inspect owner and prior result, never auto-steal'}
         if session is not None:
             result.update(session.identity())
-        print(json.dumps(result_with_assessment(result, metadata), ensure_ascii=False))
+        print(json.dumps(result_with_assessment(result, metadata), ensure_ascii=True))
         return 1
     except (OSError, ValueError, TypeError) as exc:
         result = {'outcome': 'error', 'error': str(exc)}
         if session is not None:
             result.update(session.identity())
-        print(json.dumps(result_with_assessment(result, metadata), ensure_ascii=False))
+        print(json.dumps(result_with_assessment(result, metadata), ensure_ascii=True))
         return 1
 
 
