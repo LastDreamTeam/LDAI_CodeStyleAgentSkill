@@ -327,8 +327,17 @@ def synchronize(skill, directory, config, *, idle, force=False, approved=False, 
 
 
 def commit_header(config, model, bot, summary, *, mixed_human=False, client='',
-                  named_bot=False, computer_name=None):
+                  named_bot=False, computer_name=None, visibility=None):
     # OpenAI: Render an already-reviewed attribution decision; never guess authorship from a word match.
+    if visibility not in ('public', 'private'):
+        raise ValueError('Verify the destination and explicitly select public or private visibility')
+    if visibility == 'public':
+        if (not isinstance(summary, str) or not summary or not summary.isprintable()
+                or summary != summary.strip() or '|' in summary):
+            raise ValueError('Summary must be non-empty single-line text without pipe delimiters')
+        if re.search(r'(?:模型|计算机)\s*[:：]', summary):
+            raise ValueError('Public summary must not reintroduce model or computer identity fields')
+        return summary
     for value in (model, summary) + tuple(value for value in (bot, client) if value):
         if (not isinstance(value, str) or not value or not value.isprintable()
                 or value != value.strip() or '|' in value):
@@ -369,7 +378,9 @@ def main():
     commands = parser.add_subparsers(dest='command', required=True)
     commands.add_parser('show')
     header = commands.add_parser('commit-header', help='Render a header; does not stage, commit, push or inspect Git')
-    header.add_argument('--model', required=True)
+    header.add_argument('--visibility', choices=('public', 'private'), required=True,
+                        help='Caller-verified destination visibility; public omits identity')
+    header.add_argument('--model')
     actor = header.add_mutually_exclusive_group()
     actor.add_argument('--bot', default='')
     actor.add_argument('--client', default='', help='Actual local Agent client, such as Codex or ClaudeCode')
@@ -395,6 +406,15 @@ def main():
             sub.add_argument('--approve-update', action='store_true',
                              help='Caller has explicit user approval for this update only')
     args = parser.parse_args()
+    if args.command == 'commit-header' and args.visibility == 'public':
+        # OpenAI: Public output never loads local preferences or queries the machine identity.
+        try:
+            value = commit_header(None, None, '', args.summary, visibility='public')
+        except ValueError as exc:
+            print(json.dumps({'status': 'error', 'error': str(exc)}, ensure_ascii=True))
+            return 1
+        print(json.dumps({'header': value, 'visibility': 'public'}, ensure_ascii=True))
+        return 0
     skill = args.skill_root.resolve()
     directory = data_dir(skill, args.data_root)
     try:
@@ -439,7 +459,8 @@ def main():
             elif args.command == 'commit-header':
                 result = {'header': commit_header(config, args.model, args.bot, args.summary,
                                                   mixed_human=args.mixed_human, client=args.client,
-                                                  named_bot=args.named_bot, computer_name=args.computer_name)}
+                                                  named_bot=args.named_bot, computer_name=args.computer_name,
+                                                  visibility=args.visibility)}
             # OpenAI: ASCII JSON preserves Unicode values across legacy Windows console encodings.
             print(json.dumps({'data_dir': str(directory), 'config_path': str(directory/'config.json'),
                               'config': config, 'interaction': interaction_config(config),

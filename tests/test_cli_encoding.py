@@ -44,7 +44,7 @@ class CliEncodingTests(unittest.TestCase):
                 before = config_file.read_bytes()
                 summary = '保留中文与 Unicode 🌙 café'
                 result = self.decode(self.invoke(
-                    skill, data, encoding, 'commit-header', '--client', 'Codex',
+                    skill, data, encoding, 'commit-header', '--visibility', 'private', '--client', 'Codex',
                     '--model', 'vendor/model', '--computer-name', 'TEST-PC',
                     '--summary', summary, '--mixed-human'), 0)
                 self.assertEqual(result['header'],

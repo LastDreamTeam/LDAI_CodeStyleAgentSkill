@@ -14,6 +14,8 @@ SCRIPT = ROOT/'skills/ld-codestyle-online/scripts/maintain.py'
 
 class CommitIdentityTests(unittest.TestCase):
     def invoke(self, skill, data, *args):
+        if args and args[0] == 'commit-header':
+            args = (args[0], '--visibility', 'private', *args[1:])
         return subprocess.run([sys.executable, '-B', str(SCRIPT), '--skill-root', str(skill),
                                '--data-root', str(data), *args], capture_output=True,
                               text=True, encoding='utf-8', timeout=10)
@@ -164,16 +166,17 @@ class CommitIdentityTests(unittest.TestCase):
         spec.loader.exec_module(module)
         with patch.object(module.socket, 'gethostname', return_value='OS-HOST'):
             self.assertIn('（计算机：OS-HOST）', module.commit_header(module.DEFAULTS,
-                          'vendor/model', '', '实测主机名'))
+                          'vendor/model', '', '实测主机名', visibility='private'))
         for host in ('', ' fake ', 'host\n##模型：other', 'host | fake', 'host） | fake', 'host/path'):
             with self.subTest(host=host), self.assertRaises(ValueError):
-                module.commit_header(module.DEFAULTS, 'vendor/model', '', '拒绝伪造字段', computer_name=host)
+                module.commit_header(module.DEFAULTS, 'vendor/model', '', '拒绝伪造字段',
+                                     computer_name=host, visibility='private')
         with patch.object(module.socket, 'gethostname', return_value=''):
             with self.assertRaises(ValueError):
-                module.commit_header(module.DEFAULTS, 'vendor/model', '', '未查询到机器')
+                module.commit_header(module.DEFAULTS, 'vendor/model', '', '未查询到机器', visibility='private')
         with patch.object(module.socket, 'gethostname', side_effect=OSError('unavailable')):
             with self.assertRaises(OSError):
-                module.commit_header(module.DEFAULTS, 'vendor/model', '', '未查询到机器')
+                module.commit_header(module.DEFAULTS, 'vendor/model', '', '未查询到机器', visibility='private')
 
     def test_document_templates_produce_exact_git_subject(self):
         import re
@@ -181,7 +184,7 @@ class CommitIdentityTests(unittest.TestCase):
                 ROOT/'skills/ld-codestyle-online/references/commit.md']
         templates = [block for doc in docs
                      for block in re.findall(r'```text\n(.*?)\n```', doc.read_text(encoding='utf-8'), re.S)
-                     if block.startswith('##') and '##问题：' in block]
+                     if '##问题：' in block and '##解决：' in block]
         self.assertTrue(templates)
         with tempfile.TemporaryDirectory() as tmp:
             subprocess.run(['git', 'init', '-q', tmp], check=True, capture_output=True)
