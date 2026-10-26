@@ -76,7 +76,7 @@ class CommitIdentityTests(unittest.TestCase):
             result = self.invoke(skill, data, 'commit-header', '--model', 'gpt-6-astra',
                                  '--summary', '无Bot身份的实现', '--mixed-human')
             self.assertEqual(json.loads(result.stdout)['header'],
-                             f'##褪色的梦 + 模型：gpt-6-astra（计算机：{socket.gethostname()}） | 无Bot身份的实现')
+                             f'##褪色的梦 + 模型：gpt-6-astra PC:{socket.gethostname()} | 无Bot身份的实现')
             for field in ('--model', '--bot', '--summary'):
                 bad_args = list(args)
                 bad_args[bad_args.index(field)+1] = '伪造\n##主人 + 模型：other'
@@ -115,7 +115,7 @@ class CommitIdentityTests(unittest.TestCase):
                                  '--summary', '保留合法原标识')
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual(json.loads(result.stdout)['header'],
-                             f'##模型：vendor/model+adapter（计算机：{socket.gethostname()}） | 保留合法原标识')
+                             f'##模型：vendor/model+adapter PC:{socket.gethostname()} | 保留合法原标识')
 
     def test_local_clients_and_default_bots_keep_machine_identity(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -129,13 +129,13 @@ class CommitIdentityTests(unittest.TestCase):
                                          '--summary', '可追溯提交')
                     self.assertEqual(result.returncode, 0, result.stdout+result.stderr)
                     self.assertEqual(json.loads(result.stdout)['header'],
-                                     f'##模型：{client} + vendor/model（计算机：TEST-PC） | 可追溯提交')
+                                     f'##模型：{client} + vendor/model PC:TEST-PC | 可追溯提交')
             for bot in ('Hermes Bot', 'Grok Bot', 'GPT Dot', 'Assistant', 'OpenAI Codex'):
                 args = ('commit-header', '--model', 'vendor/model', '--bot', bot,
                         '--computer-name', 'TEST-PC', '--summary', '默认名不能代替机器')
                 result = self.invoke(skill, data, *args)
                 self.assertEqual(result.returncode, 0, result.stdout+result.stderr)
-                self.assertIn('（计算机：TEST-PC）', json.loads(result.stdout)['header'])
+                self.assertIn(' PC:TEST-PC', json.loads(result.stdout)['header'])
                 result = self.invoke(skill, data, *args, '--named-bot')
                 self.assertNotEqual(result.returncode, 0, 'Default name must not claim named-Bot exemption')
 
@@ -146,13 +146,13 @@ class CommitIdentityTests(unittest.TestCase):
             args = ('commit-header', '--model', 'vendor/model', '--bot', '列克星敦',
                     '--summary', '保留真实Bot身份')
             default = self.invoke(skill, data, *args)
-            self.assertIn('（计算机：', json.loads(default.stdout)['header'])
+            self.assertIn(' PC:', json.loads(default.stdout)['header'])
             named = self.invoke(skill, data, *args, '--named-bot')
             self.assertEqual(named.returncode, 0, named.stdout+named.stderr)
             self.assertEqual(json.loads(named.stdout)['header'],
                              '##模型：列克星敦 + vendor/model | 保留真实Bot身份')
             named_with_host = self.invoke(skill, data, *args, '--named-bot', '--computer-name', 'BOT-HOST')
-            self.assertIn('（计算机：BOT-HOST）', json.loads(named_with_host.stdout)['header'])
+            self.assertIn(' PC:BOT-HOST', json.loads(named_with_host.stdout)['header'])
             for invalid in (('--named-bot',), ('--named-bot', '--bot', '列克星敦', '--client', 'Codex')):
                 result = self.invoke(skill, data, 'commit-header', '--model', 'vendor/model',
                                      '--summary', '不能虚构豁免', *invalid)
@@ -165,7 +165,7 @@ class CommitIdentityTests(unittest.TestCase):
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         with patch.object(module.socket, 'gethostname', return_value='OS-HOST'):
-            self.assertIn('（计算机：OS-HOST）', module.commit_header(module.DEFAULTS,
+            self.assertIn(' PC:OS-HOST', module.commit_header(module.DEFAULTS,
                           'vendor/model', '', '实测主机名', visibility='private'))
         for host in ('', ' fake ', 'host\n##模型：other', 'host | fake', 'host） | fake', 'host/path'):
             with self.subTest(host=host), self.assertRaises(ValueError):
