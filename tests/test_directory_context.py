@@ -70,7 +70,7 @@ class DirectoryContextTests(unittest.TestCase):
                 for term in ('创建日期', '最近修改日期', '##模型：', '变更记录',
                              '新增/修改/删除', '条目标识', '实际模型标识'):
                     self.assertIn(term, text)
-        index = (SKILL/'references/agentic.md').read_text(encoding='utf-8')
+        index = (SKILL/'templates/module-readme.md').read_text(encoding='utf-8')
         for term in ('创建日期', '最近修改日期', '##模型：', '变更记录'):
             self.assertIn(term, index)
 
@@ -112,9 +112,9 @@ class DirectoryContextTests(unittest.TestCase):
             self.assertIn(term, spec)
         entry = (SKILL/'SKILL.md').read_text(encoding='utf-8')
         self.assertIn('每份文件头部', entry)
-        index = (SKILL/'references/agentic.md').read_text(encoding='utf-8')
-        header = index.split('```markdown\n', 1)[1].split('\n## ', 1)[0]
-        for term in ('持久共享', '逻辑作用域', 'README入口', '未安装本技能',
+        index = (SKILL/'templates/module-readme.md').read_text(encoding='utf-8')
+        header = index.split('\n## ', 1)[0]
+        for term in ('持久共享', '逻辑作用域', 'README', '未安装本技能',
                      '不得擅自删除或改作他用', '当前任务授权', '内容压缩'):
             self.assertIn(term, header)
 
@@ -140,6 +140,54 @@ class DirectoryContextTests(unittest.TestCase):
         example = spec.split('### 措辞与复核示例', 1)[-1].split('## 日期、修改身份', 1)[0]
         self.assertIn('修复并验证后', example)
         self.assertNotIn('本轮复现后，可能是保存快照捕获过晚', example)
+
+    def test_readme_replaces_legacy_agentic_index_without_losing_protection(self):
+        guide = (SKILL/'references/agentic.md').read_text(encoding='utf-8')
+        spec = (SKILL/'references/directory-context.md').read_text(encoding='utf-8')
+        contract = (SKILL/'references/contract.md').read_text(encoding='utf-8')
+        for term in ('README.md', '单一有效正文', 'Agentic/', 'AGENTS.md',
+                     '相对链接', '.meta', '迁移未完成'):
+            self.assertIn(term, guide)
+        for text in (guide, spec, contract):
+            for stale in ('`Agentic.md` 保留Core模块索引职责',
+                          '`Agentic.md`保留Core索引职责和位置',
+                          '# <模块名> Agentic 索引', '索引保留既有位置与职责'):
+                self.assertNotIn(stale, text)
+        self.assertIn('不再新建或续写', guide)
+        self.assertIn('README', contract)
+
+    def test_scope_examples_preserve_exact_targets_and_explain_discovery(self):
+        spec = (SKILL/'references/directory-context.md').read_text(encoding='utf-8')
+        section = spec.split('### 关联范围决定层级', 1)[-1].split('## 每份文件头部', 1)[0]
+        # OpenAI: Check each relationship-to-owner mapping, not just token presence.
+        rows = [[cell.strip() for cell in line.strip('|').split('|')]
+                for line in section.splitlines() if line.startswith('| `./Core/')]
+        self.assertEqual(len(rows), 2)
+        self.assertEqual(rows[0][:2], [
+            '`./Core/FunA/ViewModel.cs` 与 `./Core/Mgr.cs` 联动产生 bug',
+            '`./Agentic/DEBUG.md`'])
+        self.assertEqual(rows[1][:2], [
+            '`./Core/FunA/ViewModel.cs` 与 `./Core/FunA/Prefab.asset` 联动产生 bug',
+            '`./Core/FunA/Agentic/DEBUG.md`'])
+        for term in ('./Core/FunA/ViewModel.cs', './Core/Mgr.cs', './Agentic/DEBUG.md',
+                     './Core/FunA/Prefab.asset', './Core/FunA/Agentic/DEBUG.md',
+                     './Core/README.md', '最低充分公共层', '最深公共父目录',
+                     '只修改 Mgr.cs', '上提', '下放', '所有 Markdown 记忆',
+                     '单条知识', '单一有效正文', '按需读取', '共同读取链',
+                     '尚未建立', '不扩大权限'):
+            with self.subTest(term=term):
+                self.assertIn(term, section)
+
+    def test_each_template_explains_scope_routing_before_its_body(self):
+        for kind in ('readme', 'memory', 'user', 'debug'):
+            text = (SKILL/f'templates/module-{kind}.md').read_text(encoding='utf-8')
+            header = text.split('\n## ', 1)[0]
+            with self.subTest(kind=kind):
+                for term in ('关联范围', '上提', '下放', '按需读取', '入口', '不漏'):
+                    self.assertIn(term, header)
+        debug = (SKILL/'templates/module-debug.md').read_text(encoding='utf-8')
+        for term in ('缺陷与防复发', '关联文件/数据', '单独修改任一关联方', '唯一正文'):
+            self.assertIn(term, debug)
 
     def test_markdown_relative_links_resolve(self):
         for path in ROOT.rglob('*.md'):
