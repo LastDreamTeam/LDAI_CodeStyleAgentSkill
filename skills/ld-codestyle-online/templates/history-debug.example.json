@@ -1,0 +1,15 @@
+{
+  "id": "example-debug-001",
+  "kind": "debug",
+  "scope": "example-audio",
+  "title": "合成示例：重复订阅导致回调重复",
+  "content": "仅格式示例，不是实际修复证据。现象：合成样例多次启停后回调重复。原因：绑定与解绑不成对。有效步骤：绑定前核已有订阅并在停止时解绑。假设验证记录：样例连续启停后每次只有一次回调；该文字不可当实测通过。防复发：生命周期入口成对维护；多线程条件未覆盖。实际入库须全部换成真实已验证现象、版本、步骤、结果和边界。",
+  "source": "synthetic-example-only",
+  "occurred_at": "unknown (synthetic example)",
+  "related_paths": ["Scripts/ExampleAudio.cs"],
+  "relevance": "合成音频生命周期，不涉及其他模块。",
+  "status": "verified",
+  "evidence": ["synthetic-placeholder-not-actual-evidence"],
+  "supersedes": null,
+  "redacted": false
+}

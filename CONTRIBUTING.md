@@ -18,6 +18,8 @@
 
 ## 发布
 
+涉及区域历史工具时，实跑真实SQLite与CLI：精选入库、中文检索、ID/hash、额度与先归档后压缩、冲突/故障保全、导出导入。同步[规范](skills/ld-codestyle-online/references/memory-history.md)、入口和四份模板，禁止把测试数据或实际库上传；文档与代码均注明哈希不证明真实性、工具不保证语义保真、外部编辑器不受自动门禁。公开载荷去除个人/企业秘密，私有身份不回填到数据库或PR。
+
 技能名固定，版本记录在 `skills/ld-codestyle-online/assets/version.json` 和 `SKILL.md` frontmatter；发布时同步 README 与 CHANGELOG。使用语义版本：不兼容治理/配置变更须明确说明迁移，不让正在执行的任务静默切规则。
 
 `main` 是在线发布通道；开发用分支/PR，保持 main 始终可安装。发布 tag `v<版本>` 方便追溯和独立版本克隆。每次发布均应递增版本，否则周频脚本不会把同版本重写视为更新。
