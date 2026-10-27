@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 """OpenAI: 使用隔离的真实 SQLite 验证精选历史，不读取任何真实项目或会话。"""
+from contextlib import closing
 import importlib.util
 import json
 from pathlib import Path
@@ -113,8 +114,12 @@ class MemoryHistoryTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.module.import_history(other, self.module.export_history(self.area, reviewed=True), reviewed=True)
         self.assertEqual(self.module.export_history(other, reviewed=True), before)
-        with sqlite3.connect(self.area / 'history.sqlite3') as db:
-            db.execute('UPDATE records SET payload=? WHERE id=?', ('{}', 'u-1'))
+        # OpenAI: Connection上下文只提交事务，不关闭句柄；显式关闭才能在Windows回收临时库。
+        with closing(sqlite3.connect(self.area / 'history.sqlite3')) as db:
+            with db:
+                db.execute('UPDATE records SET payload=? WHERE id=?', ('{}', 'u-1'))
+        with self.assertRaises(sqlite3.ProgrammingError):
+            db.execute('SELECT 1')
         with self.assertRaises(ValueError):
             self.module.verify_history(self.area)
 
