@@ -7,6 +7,7 @@ import os
 import re
 import tempfile
 from contextlib import contextmanager
+from datetime import date, datetime, timedelta
 from pathlib import Path
 import sqlite3
 import sys
@@ -48,8 +49,8 @@ def connect(area, create=False, readonly=False):
 
 def metadata(db):
     """OpenAI: 核schema与责任区元数据，拒绝把别的数据库当本工具历史。"""
-    if db.execute('PRAGMA user_version').fetchone()[0] != 1:
-        raise ValueError('不支持的schema；不自动迁移')
+    if db.execute('PRAGMA user_version').fetchone()[0] != 2:
+        raise ValueError('需要schema 2；旧库不自动改写，请用旧版导出后向新库显式导入')
     row = db.execute('SELECT value FROM metadata WHERE key=?', ('area',)).fetchone()
     if row is None:
         raise ValueError('缺少责任区元数据')
@@ -75,12 +76,31 @@ def initialize(area, readme, scope, description, visibility):
                 raise ValueError('现有责任区不匹配')
         else:
             db.execute('CREATE TABLE metadata(key TEXT PRIMARY KEY,value TEXT NOT NULL)')
-            db.execute('CREATE TABLE records(id TEXT PRIMARY KEY,payload TEXT NOT NULL,sha256 TEXT NOT NULL)')
+            db.execute("CREATE TABLE records(id TEXT PRIMARY KEY,payload TEXT NOT NULL,sha256 TEXT NOT NULL,"
+                       "kind TEXT NOT NULL CHECK(kind IN ('user','debug')),occurred_at TEXT)")
+            db.execute('CREATE INDEX records_kind_occurred_at_idx ON records(kind,occurred_at,id)')
+            db.execute('CREATE INDEX records_occurred_at_idx ON records(occurred_at,id)')
             db.execute('CREATE TABLE snapshots(id TEXT PRIMARY KEY,payload TEXT NOT NULL,sha256 TEXT NOT NULL)')
             db.execute('INSERT INTO metadata VALUES (?,?)', ('area', canonical(info)))
             db.execute('INSERT INTO metadata VALUES (?,?)', ('limits', canonical(DEFAULT_LIMITS)))
-            db.execute('PRAGMA user_version=1')
+            db.execute('PRAGMA user_version=2')
     return info
+
+
+def occurrence_column(value):
+    """OpenAI: 保留来源日期/带时区时间的原写法；未知投影为SQL NULL，绝不用入库时间代填。"""
+    if value in ('unknown', '未知', '历史未知'):
+        return None
+    if not isinstance(value, str):
+        raise ValueError('occurred_at须为来源日期、带时区ISO时间或unknown')
+    if re.fullmatch(r'[0-9]{4}-[0-9]{2}-[0-9]{2}', value):
+        date.fromisoformat(value)
+    elif re.fullmatch(r'[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}'
+                      r'(?:\.[0-9]{1,6})?(?:Z|[+-](?:[01][0-9]|2[0-3]):[0-5][0-9])', value):
+        datetime.fromisoformat(value.replace('Z', '+00:00'))
+    else:
+        raise ValueError('occurred_at格式无效；不猜日期、不改写来源标识')
+    return value
 
 
 def validate_record(record, info):
@@ -96,6 +116,7 @@ def validate_record(record, info):
         raise ValueError('记录ID格式错误')
     if record['scope'] != info['scope'] or record['kind'] not in ('user', 'debug'):
         raise ValueError('只允许本scope的user/debug精选记录')
+    occurrence_column(record['occurred_at'])
     if record['kind'] == 'user' and record['status'] not in ('confirmed', 'exploration', 'superseded'):
         raise ValueError('用户原话须区分明确要求/探索/已替代')
     if record['kind'] == 'debug' and (record['status'] != 'verified' or not record['evidence']):
@@ -131,36 +152,70 @@ def append_record(area, record, reviewed=False):
             if previous['payload'] != payload or previous['sha256'] != checksum:
                 raise ValueError('记录ID冲突；不覆盖历史')
         else:
-            db.execute('INSERT INTO records VALUES (?,?,?)', (record['id'], payload, checksum))
+            db.execute('INSERT INTO records(id,payload,sha256,kind,occurred_at) VALUES (?,?,?,?,?)',
+                       (record['id'], payload, checksum, record['kind'], occurrence_column(record['occurred_at'])))
     result = read_record(area, record['id'])
     return {'id': record['id'], 'sha256': result['sha256']}
+
+
+def checked_record(row, info):
+    """OpenAI: 同时校验原文hash和SQL投影，防止列漂移造成检索结果与完整记录矛盾。"""
+    if digest(row['payload']) != row['sha256']:
+        raise ValueError('记录hash不匹配')
+    value = json.loads(row['payload'])
+    validate_record(value, info)
+    if (row['id'] != value['id'] or row['kind'] != value['kind']
+            or row['occurred_at'] != occurrence_column(value['occurred_at'])):
+        raise ValueError('日期/类型列与完整记录不一致')
+    return value
 
 
 def read_record(area, record_id):
     """OpenAI: 精确读取并验hash；损坏记录不作为压缩原文依据。"""
     with connect(area, readonly=True) as db:
-        metadata(db)
+        info = metadata(db)
         row = db.execute('SELECT * FROM records WHERE id=?', (record_id,)).fetchone()
     if row is None:
         raise ValueError('记录不存在')
-    if digest(row['payload']) != row['sha256']:
-        raise ValueError('记录hash不匹配')
-    return dict(record=json.loads(row['payload']), sha256=row['sha256'])
+    return dict(record=checked_record(row, info), sha256=row['sha256'])
 
 
-def search_records(area, query, limit=20, offset=0):
-    """OpenAI: 中文按字面子串查询，有界分页只返回索引而不是全文。"""
-    if not query.strip() or not 1 <= limit <= 50 or offset < 0:
-        raise ValueError('需要关键词、1..50条上限与非负offset')
+def search_records(area, query='', limit=20, offset=0, kind=None, from_date=None, to_date=None):
+    """OpenAI: 组合关键词/类型/来源日期筛选；含首尾日、有界分页，只返回索引不注入全文。"""
+    if not 1 <= limit <= 50 or offset < 0 or not any((query.strip(), kind, from_date, to_date)):
+        raise ValueError('需要关键词或筛选条件、1..50条上限与非负offset')
+    if kind is not None and kind not in ('user', 'debug'):
+        raise ValueError('kind只允许user或debug')
+    for bound in (from_date, to_date):
+        if bound is not None:
+            if not re.fullmatch(r'[0-9]{4}-[0-9]{2}-[0-9]{2}', bound):
+                raise ValueError('日期筛选须为YYYY-MM-DD')
+            date.fromisoformat(bound)
+    if from_date and to_date and from_date > to_date:
+        raise ValueError('日期区间倒置')
+    clauses, parameters = [], []
+    if query.strip():
+        clauses.append('instr(payload,?)>0')
+        parameters.append(query)
+    if kind is not None:
+        clauses.append('kind=?')
+        parameters.append(kind)
+    if from_date or to_date:
+        clauses.append('occurred_at IS NOT NULL')
+    if from_date:
+        clauses.append('occurred_at>=?')
+        parameters.append(from_date)
+    # OpenAI: 比较原始来源日历日期，而非UTC瞬间；上界用下一天排除边界，包含结束日全部时间。
+    if to_date and date.fromisoformat(to_date) < date.max:
+        clauses.append('occurred_at<?')
+        parameters.append((date.fromisoformat(to_date) + timedelta(days=1)).isoformat())
     with connect(area, readonly=True) as db:
-        metadata(db)
-        rows = db.execute('SELECT * FROM records WHERE instr(payload,?)>0 ORDER BY id LIMIT ? OFFSET ?',
-                          (query, limit + 1, offset)).fetchall()
+        info = metadata(db)
+        rows = db.execute('SELECT * FROM records WHERE ' + ' AND '.join(clauses) + ' ORDER BY id LIMIT ? OFFSET ?',
+                          [*parameters, limit + 1, offset]).fetchall()
     items = []
     for row in rows[:limit]:
-        if digest(row['payload']) != row['sha256']:
-            raise ValueError('记录hash不匹配')
-        value = json.loads(row['payload'])
+        value = checked_record(row, info)
         items.append({key: value[key] for key in ('id', 'kind', 'title', 'source', 'occurred_at')})
     return dict(items=items, has_more=len(rows) > limit, next_offset=offset + len(items))
 
@@ -173,9 +228,7 @@ def verify_history(area):
             raise ValueError('SQLite完整性失败')
         count = 0
         for row in db.execute('SELECT * FROM records'):
-            if digest(row['payload']) != row['sha256']:
-                raise ValueError('记录hash不匹配')
-            validate_record(json.loads(row['payload']), info)
+            checked_record(row, info)
             count += 1
         for row in db.execute('SELECT * FROM snapshots'):
             if digest(row['payload']) != row['sha256']:
@@ -302,7 +355,7 @@ def export_history(area, reviewed=False):
         raise ValueError('导出前须核scope、隐私与分享范围')
     verify_history(area)
     with connect(area, readonly=True) as db:
-        result: dict = dict(schema=1, area=metadata(db),
+        result: dict = dict(schema=2, area=metadata(db),
                       limits=json.loads(db.execute("SELECT value FROM metadata WHERE key='limits'").fetchone()[0]))
         for table in ('records', 'snapshots'):
             result[table] = [dict(row) for row in db.execute('SELECT * FROM ' + table + ' ORDER BY id')]
@@ -315,7 +368,7 @@ def import_history(area, bundle, reviewed=False):
     if not reviewed or not isinstance(bundle, dict):
         raise ValueError('导入需要核来源与隐私')
     expected = {'schema', 'area', 'limits', 'records', 'snapshots', 'sha256'}
-    if set(bundle) != expected or bundle['schema'] != 1:
+    if set(bundle) != expected or type(bundle['schema']) is not int or bundle['schema'] not in (1, 2):
         raise ValueError('交换包schema错误')
     check = {key: value for key, value in bundle.items() if key != 'sha256'}
     if digest(canonical(check)) != bundle['sha256']:
@@ -333,7 +386,10 @@ def import_history(area, bundle, reviewed=False):
                 raise ValueError('交换包列表错误')
             ids = set()
             for row in bundle[table]:
-                if set(row) != {'id', 'payload', 'sha256'} or row['id'] in ids:
+                fields = {'id', 'payload', 'sha256'}
+                if table == 'records' and bundle['schema'] == 2:
+                    fields |= {'kind', 'occurred_at'}
+                if set(row) != fields or row['id'] in ids:
                     raise ValueError('交换包重复ID或字段错误')
                 ids.add(row['id'])
                 if digest(row['payload']) != row['sha256']:
@@ -343,6 +399,8 @@ def import_history(area, bundle, reviewed=False):
                     validate_record(data, info)
                     if row['id'] != data['id']:
                         raise ValueError('记录ID不一致')
+                    if bundle['schema'] == 2:
+                        checked_record(row, info)
                 else:
                     if set(data) != {'file', 'content', 'old_sha256', 'new_sha256', 'records'}:
                         raise ValueError('摘要历史字段错误')
@@ -354,7 +412,13 @@ def import_history(area, bundle, reviewed=False):
                 if previous and (previous['payload'] != row['payload'] or previous['sha256'] != row['sha256']):
                     raise ValueError('同ID不同内容：停止整批导入')
                 if not previous:
-                    db.execute('INSERT INTO ' + table + ' VALUES (?,?,?)', (row['id'], row['payload'], row['sha256']))
+                    if table == 'records':
+                        # OpenAI: 旧交换包只增投影列；payload和hash逐字保留，不改原话以迎合新schema。
+                        db.execute('INSERT INTO records(id,payload,sha256,kind,occurred_at) VALUES (?,?,?,?,?)',
+                                   (row['id'], row['payload'], row['sha256'], data['kind'],
+                                    occurrence_column(data['occurred_at'])))
+                    else:
+                        db.execute('INSERT INTO snapshots VALUES (?,?,?)', (row['id'], row['payload'], row['sha256']))
         all_records = {row['id']: json.loads(row['payload']) for row in db.execute('SELECT * FROM records')}
         for record in all_records.values():
             parent = record['supersedes']
@@ -384,7 +448,10 @@ def parser():
     get = commands.add_parser('get')
     get.add_argument('id')
     search = commands.add_parser('search')
-    search.add_argument('query')
+    search.add_argument('query', nargs='?', default='')
+    search.add_argument('--kind', choices=['user', 'debug'])
+    search.add_argument('--from-date', help='来源日期下界YYYY-MM-DD，包含当天')
+    search.add_argument('--to-date', help='来源日期上界YYYY-MM-DD，包含当天')
     search.add_argument('--limit', type=int, default=10)
     search.add_argument('--offset', type=int, default=0)
     commands.add_parser('verify')
@@ -420,7 +487,8 @@ def main(argv=None):
         elif args.command == 'get':
             result = read_record(args.area, args.id)
         elif args.command == 'search':
-            result = search_records(args.area, args.query, args.limit, args.offset)
+            result = search_records(args.area, args.query, args.limit, args.offset,
+                                    args.kind, args.from_date, args.to_date)
         elif args.command == 'verify':
             result = verify_history(args.area)
         elif args.command == 'status':

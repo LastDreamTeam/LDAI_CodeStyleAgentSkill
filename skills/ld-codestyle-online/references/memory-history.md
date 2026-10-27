@@ -19,6 +19,15 @@
 
 同ID同内容幂等；同ID异文拒绝。修订用新ID和`supersedes`串起原文，不UPDATE覆盖；旧记录永不自动视为当前要求。SQLite事务、SHA-256和完整性检查只证明结构/字节一致，不证明来源、相关性或结论真实。`--reviewed`是调用者已完成来源、scope、保真和隐私核验的声明，不是机器或人类审批证明。
 
+## 日期与类型：独立SQL列和筛选
+
+`records`除`id/payload/sha256`外，使用独立的`kind TEXT NOT NULL`及`occurred_at TEXT`列，不只埋在JSON中。`kind`只允许`user/debug`；日期列保存来源日期或带时区时间原写法，原始payload及其hash保持完整。`records_kind_occurred_at_idx(kind,occurred_at,id)`及`records_occurred_at_idx(occurred_at,id)`分别支持类型联合日期、单独日期筛选。写入、读取、核验及导入检查列与原文一致，hash不能单独抵扣投影漂移。
+
+- `occurred_at`是用户原话/事件发生日期，不是入库时间。接受严格`YYYY-MM-DD`或带`Z/±HH:MM`时区的ISO时间（秒必填、可选1–6位小数）；无日期用`unknown`、`未知`或`历史未知`，SQL投影为NULL、payload保留原值。不猜历史日期，不静默修正非法日期/时区。
+- `search`增加`--kind user|debug`、`--from-date YYYY-MM-DD`、`--to-date YYYY-MM-DD`，可单独或与关键词组合；只按类型/日期检索时可不写关键词，但不允许完全无条件扫描。
+- 日期区间包含首尾日，依据**原来源所写的日历日期**，不是把不同时区转换成UTC瞬间比较。未知日期不进入日期区间结果，仍可由关键词、类型或ID查回。日期非法/区间倒置拒绝；输出保持按ID稳定排序和原有分页上限，不宣称按时间先后排列。
+- 新库及交换包使用schema 2。已有schema 1库不会自动原地改写：保持旧库原件，用之前匹配的工具导出，明确采用时在独立新责任区副本初始化同scope/README/描述/可见性与额度的新库，再显式导入schema 1交换包。核完整记录、旧摘要修订、hash及新列后再切换README入口；不覆盖旧库、不改真实工程。schema 1/2交换包均校验后整批导入；旧文本日期不合新格式时整批拒绝，保留原包，另核来源处理，不能自动改原话迎合校验。schema 1工具不能读取新库/包。
+
 ## 有限摘要与压缩授权
 
 默认提案为 USER **4000**、MEMORY **6000**、DEBUG **6000 Unicode字符**，包含头部、空白、索引和变更记录；不是token，不是用户指定数值。可通过区域工具显式调整，必须有限且在README/摘要头可查；禁止为了这次写入自动抬高额度。达到80%提示整理；超过上限拒绝工具写入、不截尾、不默默丢条目。
@@ -39,7 +48,7 @@
 Python 3.10+标准库工具：`scripts/memory_history.py`。每个命令必须显式指定实际 `--area <路径/Agentic>`。初始化须显式给真实README相对路径、scope、说明和public/private；查询不创建缺失数据库。完整命令和可调参数集中在[README](../../../README.md#区域历史与有限记忆)。
 
 - `init`建立库；`add`写精选JSON，`get <ID>`完整读回。
-- `search <词>`按字面子串（含中文）检索，返回有界索引、`has_more`和`next_offset`；不是向量搜索或FTS5，不宣称无限数据量的性能。`get`才取全文。
+- `search [词]`按字面子串（含中文）检索，可组合上述类型和日期筛选，返回有界索引、`has_more`和`next_offset`；不是向量搜索或FTS5，不宣称无限数据量的性能。`get`才取全文。
 - `status`显示额度、每份实际字符/旧文SHA、缺失、80%提示及超额；`limits`显式改区域额度，不改全局设置。
 - `replace`安全替换候选；`snapshot <ID>`完整读压缩前旧修订。恢复须先保全现状，再另行核定恢复内容，不能盲重放旧任务。
 - `verify`核库与载荷；`export`/`import`交换确定性JSON并严格校验scope、hash与ID冲突。导入整批事务回滚、不覆盖现有摘要；导出不覆盖已有输出文件。

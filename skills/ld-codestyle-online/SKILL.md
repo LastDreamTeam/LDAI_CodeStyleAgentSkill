@@ -75,6 +75,8 @@ metadata:
 
 USER/MEMORY/DEBUG默认字符硬上限分别为4000/6000/6000（含头部与索引，明确可调整，非用户亲定数字）；80%提示整理，超额拒写不截断。使用 `scripts/memory_history.py` 先入库读验，再以原文hash和记录ID替换候选，保留完整旧修订；缺库/损坏/漂移/超额不覆盖旧文。工具不自动理解原意或阻止外部编辑器，交付须检查实际三份文件和语义。SQLite不直接Git合并，历史共享必须让接手者可检索，默认不公开库/导出；详细命令与额度设置集中在README。
 
+日期与类型使用独立`occurred_at/kind`列和索引，支持关键词/类型/日期区间组合查询；日期语义、未知值及schema 1→2保全导入见[历史规范](references/memory-history.md#日期与类型独立sql列和筛选)，不自动改写旧库。
+
 ## 工具类 Agent、Bot 与交互续行
 
 - 本技能使用[LD角色与询问约定](references/interaction.md)：工具类Agent通常是Codex、Cursor、IDE AI插件、DeepSeekHarness等当前终端/宿主内的工具单元；Bot则是具人格配置、私有长期记忆/技能资料、聊天、A2A+Gateway协作及自身可操作环境的AI队友。不是行业标准或产品OS限制，也不按昵称提权。

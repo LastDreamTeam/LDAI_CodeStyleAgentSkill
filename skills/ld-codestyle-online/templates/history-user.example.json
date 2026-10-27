@@ -5,7 +5,7 @@
   "title": "合成示例：停止不删除对象",
   "content": "此为合成原话示例，不是实际用户记录：停止播放时保留现有对象；只有明确选择释放时才删除。",
   "source": "synthetic-example-only",
-  "occurred_at": "unknown (synthetic example)",
+  "occurred_at": "unknown",
   "related_paths": ["Scripts/ExampleAudio.cs"],
   "relevance": "合成音频模块的停止与释放语义，不涉及其他区域。",
   "status": "confirmed",

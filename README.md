@@ -35,6 +35,8 @@ LD = **LastDream · 最后的梦**。官网：[lastdream.net](https://lastdream.
 python -B scripts/memory_history.py --area "<实际区域>/Agentic" init --readme "../README.md" --scope "<区域ID>" --description "<负责路径与排除项>" --visibility private
 python -B scripts/memory_history.py --area "<实际区域>/Agentic" add --record "<已核精选记录.json>" --reviewed
 python -B scripts/memory_history.py --area "<实际区域>/Agentic" search "<关键词>" --limit 10 --offset 0
+# 类型与来源日期可组合筛选；此为合成日期示例，范围含首尾日，不按UTC换算
+python -B scripts/memory_history.py --area "<实际区域>/Agentic" search --kind debug --from-date 2026-01-01 --to-date 2026-01-31 --limit 10
 python -B scripts/memory_history.py --area "<实际区域>/Agentic" get "<记录ID>"
 python -B scripts/memory_history.py --area "<实际区域>/Agentic" status
 python -B scripts/memory_history.py --area "<实际区域>/Agentic" verify
@@ -49,6 +51,8 @@ python -B scripts/memory_history.py --area "<实际区域>/Agentic" import --inp
 ```
 
 记录格式见[合成用户示例](skills/ld-codestyle-online/templates/history-user.example.json)和[合成Debug示例](skills/ld-codestyle-online/templates/history-debug.example.json)。`--reviewed`不是自动语义/隐私证明；不得照抄示例当真实原话或成功证据。缺库、损坏、超额、旧文漂移或锁冲突停止该项、不截尾。工具不会抓聊天、自动压缩、装后台任务或拦截其他编辑器；交付仍须核真实文件和语义。正式采用时为库及sidecar配置精确忽略/共享策略，勿把私密数据随Git公开。
+
+日期/类型为独立SQL列并带索引；未知日期保留原值并投影为NULL。新库schema 2，旧库不自动原地改写，schema 1交换包可保全原文导入新库；准确格式、日期边界和迁移步骤见[日期与类型](skills/ld-codestyle-online/references/memory-history.md#日期与类型独立sql列和筛选)。
 
 ## 安装
 
