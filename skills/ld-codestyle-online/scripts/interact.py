@@ -210,7 +210,9 @@ class QuestionHandler(BaseHTTPRequestHandler):
             with self.host.guard:
                 result = self.host.session.check()
                 body = self.host.session.question if result is None else {'error': 'Question expired or resolved'}
-            self.reply(200 if result is None else 409, body)
+                # OpenAI: GET检查也可能设置超时终态；错误响应同样先完成再允许主循环退出。
+                self.reply(200 if result is None else 409, body)
+                self.wfile.flush()
         else:
             self.reply(404, {'error': 'Not found'})
 
@@ -239,15 +241,16 @@ class QuestionHandler(BaseHTTPRequestHandler):
         except (ValueError, UnicodeError, OSError):
             self.reply(400, {'error': 'Invalid or incomplete JSON body'})
             return
-        try:
-            with self.host.guard:
+        with self.host.guard:
+            try:
                 method = self.host.session.ready if self.path == '/ready' else self.host.session.answer
                 result = method(payload)
                 # OpenAI: daemon工作线程可能随CLI退出被截断；主循环须等响应体写完再看到终态。
                 self.reply(200, result)
-                self.wfile.flush()
-        except ValueError as exc:
-            self.reply(409, {'error': str(exc)})
+            except ValueError as exc:
+                # OpenAI: 身份校验可先发现到期再抛异常；409回复仍处于同一终态保护范围。
+                self.reply(409, {'error': str(exc)})
+            self.wfile.flush()
 
 
 ASSESSMENT_FLAGS = ('authorized', 'reversible', 'direction_clear', 'low_risk',
