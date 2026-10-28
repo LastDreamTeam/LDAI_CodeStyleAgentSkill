@@ -14,6 +14,7 @@ SCRIPT = ROOT/'skills/ld-codestyle-online/scripts/maintain.py'
 
 class CommitIdentityTests(unittest.TestCase):
     def invoke(self, skill, data, *args):
+        """OpenAI: 在隔离技能与数据目录运行 CLI，并为旧私有提交头调用补显式可见性。"""
         if args and args[0] == 'commit-header':
             args = (args[0], '--visibility', 'private', *args[1:])
         return subprocess.run([sys.executable, '-B', str(SCRIPT), '--skill-root', str(skill),
@@ -21,6 +22,7 @@ class CommitIdentityTests(unittest.TestCase):
                               text=True, encoding='utf-8', timeout=10)
 
     def test_display_name_is_separate_persistent_and_legacy_safe(self):
+        """OpenAI: 校验提交展示名独立于旧标识、按安装隔离且非法输入不覆写配置。"""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             skill, other, data = root/'skill', root/'other', root/'data'
@@ -54,6 +56,7 @@ class CommitIdentityTests(unittest.TestCase):
                 self.assertEqual(config_file.read_bytes(), before)
 
     def test_headers_reflect_mixed_contribution_and_configured_display_name(self):
+        """OpenAI: 核对人工参与标志、展示名及 Bot/模型/主机字段的提交头组合。"""
         with tempfile.TemporaryDirectory() as tmp:
             skill, data = Path(tmp)/'skill', Path(tmp)/'data'
             skill.mkdir()
@@ -86,6 +89,7 @@ class CommitIdentityTests(unittest.TestCase):
                              '// LD: keep the human contract\nclass Example {}')
 
     def test_header_render_does_not_rewrite_preferences(self):
+        """OpenAI: 检查生成提交头不会重写原始旧配置字节。"""
         with tempfile.TemporaryDirectory() as tmp:
             skill, data = Path(tmp)/'skill', Path(tmp)/'data'
             skill.mkdir()
@@ -101,6 +105,7 @@ class CommitIdentityTests(unittest.TestCase):
             self.assertEqual(config_file.read_bytes(), raw)
 
     def test_identity_fields_reject_extra_header_structure(self):
+        """OpenAI: 拒绝身份字段中的嵌入式提交头结构，同时保留合法模型原标识。"""
         with tempfile.TemporaryDirectory() as tmp:
             skill, data = Path(tmp)/'skill', Path(tmp)/'data'
             skill.mkdir()
@@ -118,6 +123,7 @@ class CommitIdentityTests(unittest.TestCase):
                              f'##模型：vendor/model+adapter PC:{socket.gethostname()} | 保留合法原标识')
 
     def test_local_clients_and_default_bots_keep_machine_identity(self):
+        """OpenAI: 验证普通客户端与通用 Bot 名称均不可豁免主机标识。"""
         with tempfile.TemporaryDirectory() as tmp:
             skill, data = Path(tmp)/'skill', Path(tmp)/'data'
             skill.mkdir()
@@ -140,6 +146,7 @@ class CommitIdentityTests(unittest.TestCase):
                 self.assertNotEqual(result.returncode, 0, 'Default name must not claim named-Bot exemption')
 
     def test_named_bot_exemption_requires_explicit_verified_identity(self):
+        """OpenAI: 仅具名且显式核验的 Bot 可省略主机；显式主机仍应输出。"""
         with tempfile.TemporaryDirectory() as tmp:
             skill, data = Path(tmp)/'skill', Path(tmp)/'data'
             skill.mkdir()
@@ -159,6 +166,7 @@ class CommitIdentityTests(unittest.TestCase):
                 self.assertNotEqual(result.returncode, 0)
 
     def test_machine_input_and_host_lookup_fail_without_fabricated_fallback(self):
+        """OpenAI: 使用替身核对真实主机读取及非法、不可获取主机名的失败路径。"""
         import importlib.util
         from unittest.mock import patch
         spec = importlib.util.spec_from_file_location('identity_maintenance_fixture', SCRIPT)
@@ -179,6 +187,7 @@ class CommitIdentityTests(unittest.TestCase):
                 module.commit_header(module.DEFAULTS, 'vendor/model', '', '未查询到机器', visibility='private')
 
     def test_document_templates_produce_exact_git_subject(self):
+        """OpenAI: 把文档示例正文交给临时 Git 仓库，核对实际提交主题未被改写。"""
         import re
         docs = [ROOT/'skills/ld-codestyle-online/SKILL.md',
                 ROOT/'skills/ld-codestyle-online/references/commit.md']
@@ -199,6 +208,7 @@ class CommitIdentityTests(unittest.TestCase):
                     self.assertEqual(subject, template.splitlines()[0])
 
     def test_configuration_edit_commands_are_centralized_in_readme(self):
+        """OpenAI: 检查配置编辑命令仅在 README 中出现且关键用法与署名契约齐全。"""
         import re
         pattern = r'config\s+--(?:human-name|human-commit-name|interval-days|auto-update|interaction|answer-wait-minutes|idle-after-minutes)\b'
         offenders = [str(path.relative_to(ROOT)) for path in ROOT.rglob('*.md')
