@@ -155,6 +155,13 @@ class DirectoryContextTests(unittest.TestCase):
                 self.assertNotIn(stale, text)
         self.assertIn('不再新建或续写', guide)
         self.assertIn('README', contract)
+        readme_template = (SKILL/'templates/module-readme.md').read_text(encoding='utf-8')
+        for heading in ('## 依赖、禁止的反向依赖与插件边界',
+                        '## 场景、预制件、资源与装配前提',
+                        '## 生命周期、数据流、线程与清理'):
+            self.assertIn(heading, readme_template)
+        self.assertIn('不得只搬章节标题或链接', guide)
+        self.assertIn('旧 Agentic.md 有价值的相关正文原意迁入', readme_template)
 
     def test_scope_examples_preserve_exact_targets_and_explain_discovery(self):
         spec = (SKILL/'references/directory-context.md').read_text(encoding='utf-8')

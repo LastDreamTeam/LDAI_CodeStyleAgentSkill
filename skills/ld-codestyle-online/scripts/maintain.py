@@ -327,17 +327,43 @@ def synchronize(skill, directory, config, *, idle, force=False, approved=False, 
 
 
 def commit_header(config, model, bot, summary, *, mixed_human=False, client='',
-                  named_bot=False, computer_name=None):
+                  named_bot=False, computer_name=None, visibility=None):
     # OpenAI: Render an already-reviewed attribution decision; never guess authorship from a word match.
+    if visibility not in ('public', 'private'):
+        raise ValueError('Verify the destination and explicitly select public or private visibility')
+    if visibility == 'public':
+        if (not isinstance(summary, str) or not summary or not summary.isprintable()
+                or summary != summary.strip() or '|' in summary):
+            raise ValueError('Summary must be non-empty single-line text without pipe delimiters')
+        if re.search(r'(?:模型|计算机|(?<![A-Za-z0-9_])PC)\s*[:：]', summary, re.IGNORECASE):
+            raise ValueError('Public summary must not reintroduce model or computer identity fields')
+        return summary
     for value in (model, summary) + tuple(value for value in (bot, client) if value):
         if (not isinstance(value, str) or not value or not value.isprintable()
                 or value != value.strip() or '|' in value):
             raise ValueError('Commit fields must be non-empty single-line text without pipe delimiters')
     if any(token in value for value in (model, bot or '', client or '')
-           for token in (' + ', '模型：', '计算机：', '##')):
+           for token in (' + ', '模型：', '计算机：', '##')) or any(
+               re.search(r'(?<![A-Za-z0-9_])PC\s*[:：]', value, re.IGNORECASE)
+               for value in (model, bot or '', client or '')):
         raise ValueError('Client/Bot/model must not contain extra header identity structure')
+    # Keep the model identifier intact; only explicitly known product aliases are shortened.
+    product_aliases = {'OpenAI Codex': 'Codex', 'OpenAICodex': 'Codex'}
+    bot = product_aliases[bot] if bot in product_aliases else bot
+    client = product_aliases[client] if client in product_aliases else client
     if bot and client:
         raise ValueError('Choose a local client or a Bot identity, not both')
+    # These are known non-model labels, not a catalogue of valid or available models.
+    non_models = {'ai', 'agent', 'assistant', 'bot', 'openai', 'anthropic', 'google', 'xai', 'deepseek',
+                  'codex', 'openaicodex', 'claudecode', 'cursor', 'copilot', 'githubcopilot',
+                  'chatgpt', 'deepseekharness', 'vscodecopilot', 'visualstudiocopilot',
+                  'vscode', 'visualstudio', 'otheragentplugin',
+                  'hermes', 'hermesbot', 'unknown', 'auto', 'default', 'latest',
+                  '未知', '待确认', '实际模型标识', '实际模型型号'}
+    normalized_model = re.sub(r'[\s_-]+', '', model).casefold()
+    if (normalized_model in non_models or '<' in model or '>' in model
+            or model.casefold() in {value.casefold() for value in (bot, client) if value}):
+        raise ValueError('A verified exact model identifier is required; product names and placeholders are not models')
     if named_bot:
         # OpenAI: The flag attests a reviewed unique identity; familiar product/default names are not unique Bots.
         default_names = {'ai', 'agent', 'assistant', 'bot', 'dot', 'hermes', 'hermesbot',
@@ -353,7 +379,7 @@ def commit_header(config, model, bot, summary, *, mixed_human=False, client='',
         actual = socket.gethostname() if computer_name is None else computer_name
         if not isinstance(actual, str) or not re.fullmatch(r'[\w.-]{1,253}', actual):
             raise ValueError('A real computer name is required; verify the execution host, do not invent a fallback')
-        machine = f'（计算机：{actual}）'
+        machine = f' PC:{actual}'
     name = config['human_commit_name']
     validate_commit_name(name)
     human = f'{name} + ' if mixed_human else ''
@@ -369,13 +395,15 @@ def main():
     commands = parser.add_subparsers(dest='command', required=True)
     commands.add_parser('show')
     header = commands.add_parser('commit-header', help='Render a header; does not stage, commit, push or inspect Git')
-    header.add_argument('--model', required=True)
+    header.add_argument('--visibility', choices=('public', 'private'), required=True,
+                        help='Caller-verified destination visibility; public omits identity')
+    header.add_argument('--model', help='Verified exact runtime model ID; required for private, never inferred from product')
     actor = header.add_mutually_exclusive_group()
     actor.add_argument('--bot', default='')
-    actor.add_argument('--client', default='', help='Actual local Agent client, such as Codex or ClaudeCode')
+    actor.add_argument('--client', default='', help='Product short name, such as Codex; not a vendor or GitHub account')
     header.add_argument('--named-bot', action='store_true',
                         help='Caller verified a distinctive non-default Bot identity; may omit the computer name')
-    header.add_argument('--computer-name', help='Verified execution computer name; otherwise query this OS')
+    header.add_argument('--computer-name', help='Verified execution host rendered as PC:<name>; otherwise query this OS')
     header.add_argument('--summary', required=True)
     header.add_argument('--mixed-human', action='store_true',
                         help='Caller has verified human contribution in the staged change')
@@ -395,6 +423,15 @@ def main():
             sub.add_argument('--approve-update', action='store_true',
                              help='Caller has explicit user approval for this update only')
     args = parser.parse_args()
+    if args.command == 'commit-header' and args.visibility == 'public':
+        # OpenAI: Public output never loads local preferences or queries the machine identity.
+        try:
+            value = commit_header(None, None, '', args.summary, visibility='public')
+        except ValueError as exc:
+            print(json.dumps({'status': 'error', 'error': str(exc)}, ensure_ascii=True))
+            return 1
+        print(json.dumps({'header': value, 'visibility': 'public'}, ensure_ascii=True))
+        return 0
     skill = args.skill_root.resolve()
     directory = data_dir(skill, args.data_root)
     try:
@@ -439,7 +476,8 @@ def main():
             elif args.command == 'commit-header':
                 result = {'header': commit_header(config, args.model, args.bot, args.summary,
                                                   mixed_human=args.mixed_human, client=args.client,
-                                                  named_bot=args.named_bot, computer_name=args.computer_name)}
+                                                  named_bot=args.named_bot, computer_name=args.computer_name,
+                                                  visibility=args.visibility)}
             # OpenAI: ASCII JSON preserves Unicode values across legacy Windows console encodings.
             print(json.dumps({'data_dir': str(directory), 'config_path': str(directory/'config.json'),
                               'config': config, 'interaction': interaction_config(config),
