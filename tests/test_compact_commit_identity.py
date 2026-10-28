@@ -14,12 +14,14 @@ SCRIPT = ROOT / 'skills/ld-codestyle-online/scripts/maintain.py'
 
 class CompactCommitIdentityTests(unittest.TestCase):
     def invoke(self, data, *args):
+        """OpenAI: 使用临时数据根运行提交头 CLI 并以 UTF-8 收集输出。"""
         return subprocess.run(
             [sys.executable, '-B', str(SCRIPT), '--data-root', str(data),
              'commit-header', *args], capture_output=True, text=True,
             encoding='utf-8', timeout=10)
 
     def test_private_codex_alias_uses_short_product_and_pc(self):
+        """OpenAI: 核对私有头仅缩短已知 Codex 产品别名并保留模型与主机。"""
         with tempfile.TemporaryDirectory() as tmp:
             for flag in ('--client', '--bot'):
                 for name in ('Codex', 'OpenAI Codex', 'OpenAICodex'):
@@ -32,6 +34,7 @@ class CompactCommitIdentityTests(unittest.TestCase):
                                          '##模型：Codex + fixture-model-v2 PC:TEST-PC | 修复输入')
 
     def test_private_rejects_product_names_and_unknown_models(self):
+        """OpenAI: 拒绝以产品名、通用词或占位符充作已核实的模型标识。"""
         with tempfile.TemporaryDirectory() as tmp:
             for model in ('', 'Codex', 'OpenAI Codex', 'OpenAICodex', 'OpenAI',
                           'xAI', 'DeepSeek', 'ChatGPT', 'DeepSeekHarness',
@@ -46,6 +49,7 @@ class CompactCommitIdentityTests(unittest.TestCase):
                     self.assertNotIn('"header"', result.stdout)
 
     def test_exact_model_identifier_is_never_shortened_with_product(self):
+        """OpenAI: 验证产品别名规整不影响带供应商及适配后缀的精确模型标识。"""
         with tempfile.TemporaryDirectory() as tmp:
             result = self.invoke(tmp, '--visibility', 'private', '--client', 'OpenAI Codex',
                                  '--model', 'vendor/exact-model-v2+adapter',
@@ -56,6 +60,7 @@ class CompactCommitIdentityTests(unittest.TestCase):
 
 
     def test_public_rejects_compact_computer_field_without_echo(self):
+        """OpenAI: 拒绝公开摘要中的独立 PC 字段且不回显主机，允许普通 PC/RPC 文本。"""
         with tempfile.TemporaryDirectory() as tmp:
             for summary in ('PC:TEST-PC', '修复输入 PC:TEST-PC', 'pc：TEST-PC', 'PC : TEST-PC'):
                 with self.subTest(summary=summary):
@@ -69,6 +74,7 @@ class CompactCommitIdentityTests(unittest.TestCase):
                 self.assertEqual(json.loads(result.stdout)['header'], summary)
 
     def test_private_rejects_compact_field_inside_identity(self):
+        """OpenAI: 防止模型或执行者字段嵌入另一份紧凑主机身份结构。"""
         with tempfile.TemporaryDirectory() as tmp:
             for field in ('--model', '--client', '--bot'):
                 for value in ('PC:EXTRA', 'name PC：EXTRA', 'name pc:EXTRA'):
@@ -84,6 +90,7 @@ class CompactCommitIdentityTests(unittest.TestCase):
                         self.assertNotIn('"header"', result.stdout)
 
     def test_private_bot_and_unknown_product_names_remain_exact(self):
+        """OpenAI: 核对具名 Bot 与未知产品原样保留，通用产品不得冒领具名豁免。"""
         with tempfile.TemporaryDirectory() as tmp:
             for args, identity in (
                 (('--bot', 'FixtureBot', '--named-bot'), 'FixtureBot + fixture-model-v2'),
@@ -100,6 +107,7 @@ class CompactCommitIdentityTests(unittest.TestCase):
                 self.assertNotEqual(result.returncode, 0, result.stdout)
 
     def test_git_subject_and_single_commit_author_do_not_change_repository_identity(self):
+        """OpenAI: 用临时仓库验证提交主题、单次作者覆盖与原仓库配置均各自独立。"""
         with tempfile.TemporaryDirectory() as tmp:
             repo, data = Path(tmp) / 'repo', Path(tmp) / 'data'
             repo.mkdir()
@@ -108,6 +116,7 @@ class CompactCommitIdentityTests(unittest.TestCase):
             env.update(GIT_CONFIG_NOSYSTEM='1', GIT_CONFIG_GLOBAL=os.devnull)
 
             def git(*args, input=None):
+                """OpenAI: 仅在隔离仓库执行 Git 并返回去掉末尾换行的标准输出。"""
                 return subprocess.run(['git', '-C', str(repo), *args], input=input,
                                       capture_output=True, text=True, encoding='utf-8',
                                       env=env, check=True, timeout=10).stdout.strip()

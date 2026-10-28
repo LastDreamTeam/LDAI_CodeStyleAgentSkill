@@ -239,7 +239,7 @@ commit 前核实际目标，push 前复核托管平台可见性；fork/PR目标�
 
 ## 版本与贡献
 
-技能名固定为 `ld-codestyle-online`，本分支准备 **0.4.0**（公开提交隐私规则；`commit-header`新增必填可见性参数），尚未合并或发布。已发布版本 **0.3.1** 及其 [Release 包](https://github.com/LastDreamTeam/LDAI_CodeStyleAgentSkill/releases/tag/v0.3.1) 保持不变，见 [CHANGELOG.md](CHANGELOG.md)。更新不是通过改技能名为 v7、v8 来分发；配置schema仍为1，原地升级保留偏好，自动更新默认关闭，运行中任务保持原规则版本。
+技能名固定为 `ld-codestyle-online`，当前源码版本 **0.4.0**，整合公开隐私、私有短身份、README承接与记忆归层、精选SQLite历史和强制源码注释。`commit-header`新增必填可见性参数；历史库schema为2，安装偏好schema仍为1。独立 Release 包仍为 **0.3.1**，其 [Release 包](https://github.com/LastDreamTeam/LDAI_CodeStyleAgentSkill/releases/tag/v0.3.1) 与旧tag保持不变，本次不新建tag/Release，见 [CHANGELOG.md](CHANGELOG.md)。更新不通过改技能名为 v7、v8 分发；原地升级保留偏好，自动更新默认关闭，运行中任务保持原规则版本，不自动更新其他终端。
 
 Release ZIP用于允许文件包安装的宿主，不绕过原生管理器审批，也不具有Git fast-forward更新能力；现有Git/Hermes安装仍走原管理方式，不用ZIP覆盖。升级前内容可从 [legacy备份分支](https://github.com/LastDreamTeam/LDAI_CodeStyleAgentSkill/tree/legacy/main-20261016-6aa86d5) 核对。
 

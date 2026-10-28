@@ -194,9 +194,7 @@ def search_records(area, query='', limit=20, offset=0, kind=None, from_date=None
     if from_date and to_date and from_date > to_date:
         raise ValueError('日期区间倒置')
     clauses, parameters = [], []
-    if query.strip():
-        clauses.append('instr(payload,?)>0')
-        parameters.append(query)
+
     if kind is not None:
         clauses.append('kind=?')
         parameters.append(kind)
@@ -210,30 +208,91 @@ def search_records(area, query='', limit=20, offset=0, kind=None, from_date=None
         clauses.append('occurred_at<?')
         parameters.append((date.fromisoformat(to_date) + timedelta(days=1)).isoformat())
     with connect(area, readonly=True) as db:
+        db.execute('BEGIN')
         info = metadata(db)
-        rows = db.execute('SELECT * FROM records WHERE ' + ' AND '.join(clauses) + ' ORDER BY id LIMIT ? OFFSET ?',
-                          [*parameters, limit + 1, offset]).fetchall()
-    items = []
-    for row in rows[:limit]:
+        # OpenAI: 精选库先流式核投影；否则被损坏类型/日期筛掉的行会变成静默漏检。
+        for row in db.execute('SELECT * FROM records'):
+            checked_record(row, info)
+        where = ' WHERE ' + ' AND '.join(clauses) if clauses else ''
+        rows = db.execute('SELECT * FROM records' + where + ' ORDER BY id', parameters)
+        items, matched = [], 0
+        for row in rows:
+            value = checked_record(row, info)
+            # OpenAI: 只搜索解码后的字段值；不能让JSON转义或字段名影响原文字面检索。
+            texts = [part for field in value.values() for part in (field if isinstance(field, list) else [field])
+                     if isinstance(part, str)]
+            if query.strip() and not any(query in text for text in texts):
+                continue
+            matched += 1
+            if matched <= offset:
+                continue
+            items.append({key: value[key] for key in ('id', 'kind', 'title', 'source', 'occurred_at')})
+            if len(items) > limit:
+                break
+    return dict(items=items[:limit], has_more=len(items) > limit, next_offset=offset + len(items[:limit]))
+
+
+def checked_snapshot(row, db, info):
+    """OpenAI: 统一校验恢复快照的结构、内容标识和可达来源，不把hash当真实性证明。"""
+    if row is None or not isinstance(row['payload'], str):
+        raise ValueError('摘要历史缺失或损坏')
+    checksum = digest(row['payload'])
+    if checksum != row['sha256'] or checksum != row['id']:
+        raise ValueError('摘要历史ID/hash不匹配')
+    value = json.loads(row['payload'])
+    if not isinstance(value, dict) or set(value) != {'file', 'content', 'old_sha256', 'new_sha256', 'records'}:
+        raise ValueError('摘要历史字段错误')
+    if not isinstance(value['file'], str) or value['file'] not in DEFAULT_LIMITS or not isinstance(value['content'], str):
+        raise ValueError('摘要历史文件/原文类型错误')
+    for key in ('old_sha256', 'new_sha256'):
+        if not isinstance(value[key], str) or not re.fullmatch(r'[0-9a-f]{64}', value[key]):
+            raise ValueError('摘要历史hash格式错误')
+    if digest(value['content']) != value['old_sha256']:
+        raise ValueError('摘要原文hash错误')
+    ids = value['records']
+    if (not isinstance(ids, list) or any(not isinstance(item, str) or
+            not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._-]{0,79}', item) for item in ids)
+            or len(set(ids)) != len(ids) or (not ids and value['file'] != 'MEMORY.md')):
+        raise ValueError('摘要历史来源列表错误')
+    # OpenAI: 所有读取及交换路径共用此检查，避免verify放行、迁移时才发现坏包。
+    for record_id in ids:
+        source = db.execute('SELECT * FROM records WHERE id=?', (record_id,)).fetchone()
+        if source is None:
+            raise ValueError('摘要历史引用的记录缺失')
+        checked_record(source, info)
+    return value
+
+
+def verify_database(db):
+    """OpenAI: 在调用者同一事务中核结构、载荷与引用，供verify、导入和导出一致复用。"""
+    info = metadata(db)
+    if db.execute('PRAGMA integrity_check').fetchone()[0] != 'ok':
+        raise ValueError('SQLite完整性失败')
+    limits = db.execute('SELECT value FROM metadata WHERE key=?', ('limits',)).fetchone()
+    if limits is None:
+        raise ValueError('缺少摘要额度')
+    validate_limits(json.loads(limits[0]))
+    parents = {}
+    for row in db.execute('SELECT * FROM records'):
         value = checked_record(row, info)
-        items.append({key: value[key] for key in ('id', 'kind', 'title', 'source', 'occurred_at')})
-    return dict(items=items, has_more=len(rows) > limit, next_offset=offset + len(items))
+        parents[value['id']] = value['supersedes']
+    for record_id, parent in parents.items():
+        seen = {record_id}
+        while parent:
+            if parent not in parents or parent in seen:
+                raise ValueError('替代链缺失或循环')
+            seen.add(parent)
+            parent = parents[parent]
+    for row in db.execute('SELECT * FROM snapshots'):
+        checked_snapshot(row, db, info)
+    return dict(scope=info['scope'], records=len(parents), integrity='ok')
 
 
 def verify_history(area):
-    """OpenAI: 核SQLite完整性及每条载荷hash，不代替事实或语义审查。"""
+    """OpenAI: 在一致的只读事务中核完整历史，不代替事实或语义审查。"""
     with connect(area, readonly=True) as db:
-        info = metadata(db)
-        if db.execute('PRAGMA integrity_check').fetchone()[0] != 'ok':
-            raise ValueError('SQLite完整性失败')
-        count = 0
-        for row in db.execute('SELECT * FROM records'):
-            checked_record(row, info)
-            count += 1
-        for row in db.execute('SELECT * FROM snapshots'):
-            if digest(row['payload']) != row['sha256']:
-                raise ValueError('摘要历史hash不匹配')
-    return dict(scope=info['scope'], records=count, integrity='ok')
+        db.execute('BEGIN')
+        return verify_database(db)
 
 
 def summary_path(area, name):
@@ -280,17 +339,21 @@ def configure_limits(area, limits):
     with connect(area) as db:
         metadata(db)
         db.execute('UPDATE metadata SET value=? WHERE key=?', (canonical(limits), 'limits'))
-    return summary_status(area)
+    try:
+        return {**summary_status(area), 'committed': True}
+    except (OSError, ValueError, sqlite3.Error) as error:
+        # OpenAI: DB事务已经提交；把状态读取失败与写入失败分开，避免重复执行。
+        return dict(committed=True, limits=limits, status_error=str(error),
+                    warning='额度已保存，摘要状态读取失败；先修复文件再status，不要重放写入')
 
 
 def read_snapshot(area, snapshot_id):
     """OpenAI: 完整读取压缩前的摘要修订，不将其当当前有效指令。"""
     with connect(area, readonly=True) as db:
-        metadata(db)
+        db.execute('BEGIN')
+        info = metadata(db)
         row = db.execute('SELECT * FROM snapshots WHERE id=?', (snapshot_id,)).fetchone()
-    if row is None or digest(row['payload']) != row['sha256']:
-        raise ValueError('摘要历史缺失或损坏')
-    return json.loads(row['payload'])
+        return checked_snapshot(row, db, info)
 
 
 def replace_summary(area, name, content, expected_sha256, record_ids, reviewed=False):
@@ -353,8 +416,10 @@ def export_history(area, reviewed=False):
     """OpenAI: 确定性导出完整精选历史供显式共享，不默认公开或读取Bot私有库。"""
     if not reviewed:
         raise ValueError('导出前须核scope、隐私与分享范围')
-    verify_history(area)
     with connect(area, readonly=True) as db:
+        # OpenAI: 验证与导出共享读事务，不能在两次连接之间混进未经校验的并发变化。
+        db.execute('BEGIN')
+        verify_database(db)
         result: dict = dict(schema=2, area=metadata(db),
                       limits=json.loads(db.execute("SELECT value FROM metadata WHERE key='limits'").fetchone()[0]))
         for table in ('records', 'snapshots'):
@@ -389,7 +454,9 @@ def import_history(area, bundle, reviewed=False):
                 fields = {'id', 'payload', 'sha256'}
                 if table == 'records' and bundle['schema'] == 2:
                     fields |= {'kind', 'occurred_at'}
-                if set(row) != fields or row['id'] in ids:
+                if (not isinstance(row, dict) or set(row) != fields
+                        or not all(isinstance(row[key], str) for key in ('id', 'payload', 'sha256'))
+                        or row['id'] in ids):
                     raise ValueError('交换包重复ID或字段错误')
                 ids.add(row['id'])
                 if digest(row['payload']) != row['sha256']:
@@ -402,12 +469,7 @@ def import_history(area, bundle, reviewed=False):
                     if bundle['schema'] == 2:
                         checked_record(row, info)
                 else:
-                    if set(data) != {'file', 'content', 'old_sha256', 'new_sha256', 'records'}:
-                        raise ValueError('摘要历史字段错误')
-                    if data['file'] not in DEFAULT_LIMITS or digest(data['content']) != data['old_sha256']:
-                        raise ValueError('摘要原文hash错误')
-                    if digest(row['payload']) != row['id'] or (not data['records'] and data['file'] != 'MEMORY.md'):
-                        raise ValueError('摘要历史ID/来源错误')
+                    checked_snapshot(row, db, info)
                 previous = db.execute('SELECT payload,sha256 FROM ' + table + ' WHERE id=?', (row['id'],)).fetchone()
                 if previous and (previous['payload'] != row['payload'] or previous['sha256'] != row['sha256']):
                     raise ValueError('同ID不同内容：停止整批导入')
@@ -419,19 +481,9 @@ def import_history(area, bundle, reviewed=False):
                                     occurrence_column(data['occurred_at'])))
                     else:
                         db.execute('INSERT INTO snapshots VALUES (?,?,?)', (row['id'], row['payload'], row['sha256']))
-        all_records = {row['id']: json.loads(row['payload']) for row in db.execute('SELECT * FROM records')}
-        for record in all_records.values():
-            parent = record['supersedes']
-            seen = {record['id']}
-            while parent:
-                if parent not in all_records or parent in seen:
-                    raise ValueError('替代链缺失或循环')
-                seen.add(parent)
-                parent = all_records[parent]['supersedes']
-        for row in db.execute('SELECT payload FROM snapshots'):
-            if any(record_id not in all_records for record_id in json.loads(row[0])['records']):
-                raise ValueError('摘要历史引用的记录缺失')
-    return verify_history(area)
+        # OpenAI: 最终不变量在commit之前校验，失败可回滚整个包而不是提交后才报错。
+        result = verify_database(db)
+    return result
 
 
 def parser():
