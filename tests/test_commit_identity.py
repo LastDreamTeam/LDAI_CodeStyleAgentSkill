@@ -14,6 +14,8 @@ SCRIPT = ROOT/'skills/ld-codestyle-online/scripts/maintain.py'
 
 class CommitIdentityTests(unittest.TestCase):
     def invoke(self, skill, data, *args):
+        if args and args[0] == 'commit-header':
+            args = (args[0], '--visibility', 'private', *args[1:])
         return subprocess.run([sys.executable, '-B', str(SCRIPT), '--skill-root', str(skill),
                                '--data-root', str(data), *args], capture_output=True,
                               text=True, encoding='utf-8', timeout=10)
@@ -74,7 +76,7 @@ class CommitIdentityTests(unittest.TestCase):
             result = self.invoke(skill, data, 'commit-header', '--model', 'gpt-6-astra',
                                  '--summary', '无Bot身份的实现', '--mixed-human')
             self.assertEqual(json.loads(result.stdout)['header'],
-                             f'##褪色的梦 + 模型：gpt-6-astra（计算机：{socket.gethostname()}） | 无Bot身份的实现')
+                             f'##褪色的梦 + 模型：gpt-6-astra PC:{socket.gethostname()} | 无Bot身份的实现')
             for field in ('--model', '--bot', '--summary'):
                 bad_args = list(args)
                 bad_args[bad_args.index(field)+1] = '伪造\n##主人 + 模型：other'
@@ -113,7 +115,7 @@ class CommitIdentityTests(unittest.TestCase):
                                  '--summary', '保留合法原标识')
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual(json.loads(result.stdout)['header'],
-                             f'##模型：vendor/model+adapter（计算机：{socket.gethostname()}） | 保留合法原标识')
+                             f'##模型：vendor/model+adapter PC:{socket.gethostname()} | 保留合法原标识')
 
     def test_local_clients_and_default_bots_keep_machine_identity(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -127,13 +129,13 @@ class CommitIdentityTests(unittest.TestCase):
                                          '--summary', '可追溯提交')
                     self.assertEqual(result.returncode, 0, result.stdout+result.stderr)
                     self.assertEqual(json.loads(result.stdout)['header'],
-                                     f'##模型：{client} + vendor/model（计算机：TEST-PC） | 可追溯提交')
+                                     f'##模型：{client} + vendor/model PC:TEST-PC | 可追溯提交')
             for bot in ('Hermes Bot', 'Grok Bot', 'GPT Dot', 'Assistant', 'OpenAI Codex'):
                 args = ('commit-header', '--model', 'vendor/model', '--bot', bot,
                         '--computer-name', 'TEST-PC', '--summary', '默认名不能代替机器')
                 result = self.invoke(skill, data, *args)
                 self.assertEqual(result.returncode, 0, result.stdout+result.stderr)
-                self.assertIn('（计算机：TEST-PC）', json.loads(result.stdout)['header'])
+                self.assertIn(' PC:TEST-PC', json.loads(result.stdout)['header'])
                 result = self.invoke(skill, data, *args, '--named-bot')
                 self.assertNotEqual(result.returncode, 0, 'Default name must not claim named-Bot exemption')
 
@@ -144,13 +146,13 @@ class CommitIdentityTests(unittest.TestCase):
             args = ('commit-header', '--model', 'vendor/model', '--bot', '列克星敦',
                     '--summary', '保留真实Bot身份')
             default = self.invoke(skill, data, *args)
-            self.assertIn('（计算机：', json.loads(default.stdout)['header'])
+            self.assertIn(' PC:', json.loads(default.stdout)['header'])
             named = self.invoke(skill, data, *args, '--named-bot')
             self.assertEqual(named.returncode, 0, named.stdout+named.stderr)
             self.assertEqual(json.loads(named.stdout)['header'],
                              '##模型：列克星敦 + vendor/model | 保留真实Bot身份')
             named_with_host = self.invoke(skill, data, *args, '--named-bot', '--computer-name', 'BOT-HOST')
-            self.assertIn('（计算机：BOT-HOST）', json.loads(named_with_host.stdout)['header'])
+            self.assertIn(' PC:BOT-HOST', json.loads(named_with_host.stdout)['header'])
             for invalid in (('--named-bot',), ('--named-bot', '--bot', '列克星敦', '--client', 'Codex')):
                 result = self.invoke(skill, data, 'commit-header', '--model', 'vendor/model',
                                      '--summary', '不能虚构豁免', *invalid)
@@ -163,17 +165,18 @@ class CommitIdentityTests(unittest.TestCase):
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         with patch.object(module.socket, 'gethostname', return_value='OS-HOST'):
-            self.assertIn('（计算机：OS-HOST）', module.commit_header(module.DEFAULTS,
-                          'vendor/model', '', '实测主机名'))
+            self.assertIn(' PC:OS-HOST', module.commit_header(module.DEFAULTS,
+                          'vendor/model', '', '实测主机名', visibility='private'))
         for host in ('', ' fake ', 'host\n##模型：other', 'host | fake', 'host） | fake', 'host/path'):
             with self.subTest(host=host), self.assertRaises(ValueError):
-                module.commit_header(module.DEFAULTS, 'vendor/model', '', '拒绝伪造字段', computer_name=host)
+                module.commit_header(module.DEFAULTS, 'vendor/model', '', '拒绝伪造字段',
+                                     computer_name=host, visibility='private')
         with patch.object(module.socket, 'gethostname', return_value=''):
             with self.assertRaises(ValueError):
-                module.commit_header(module.DEFAULTS, 'vendor/model', '', '未查询到机器')
+                module.commit_header(module.DEFAULTS, 'vendor/model', '', '未查询到机器', visibility='private')
         with patch.object(module.socket, 'gethostname', side_effect=OSError('unavailable')):
             with self.assertRaises(OSError):
-                module.commit_header(module.DEFAULTS, 'vendor/model', '', '未查询到机器')
+                module.commit_header(module.DEFAULTS, 'vendor/model', '', '未查询到机器', visibility='private')
 
     def test_document_templates_produce_exact_git_subject(self):
         import re
@@ -181,7 +184,7 @@ class CommitIdentityTests(unittest.TestCase):
                 ROOT/'skills/ld-codestyle-online/references/commit.md']
         templates = [block for doc in docs
                      for block in re.findall(r'```text\n(.*?)\n```', doc.read_text(encoding='utf-8'), re.S)
-                     if block.startswith('##') and '##问题：' in block]
+                     if '##问题：' in block and '##解决：' in block]
         self.assertTrue(templates)
         with tempfile.TemporaryDirectory() as tmp:
             subprocess.run(['git', 'init', '-q', tmp], check=True, capture_output=True)
