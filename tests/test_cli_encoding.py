@@ -48,7 +48,7 @@ class CliEncodingTests(unittest.TestCase):
                     '--model', 'vendor/model', '--computer-name', 'TEST-PC',
                     '--summary', summary, '--mixed-human'), 0)
                 self.assertEqual(result['header'],
-                                 f'##{display} + 模型：Codex + vendor/model（计算机：TEST-PC） | {summary}')
+                                 f'##{display} + 模型：Codex + vendor/model PC:TEST-PC | {summary}')
                 self.assertEqual(config_file.read_bytes(), before)
 
     def test_unicode_filesystem_errors_remain_machine_readable(self):
