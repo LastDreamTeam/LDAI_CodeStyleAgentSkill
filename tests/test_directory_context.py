@@ -187,7 +187,7 @@ class DirectoryContextTests(unittest.TestCase):
         for term in ('./Core/FunA/ViewModel.cs', './Core/Mgr.cs', './Agentic/DEBUG.md',
                      './Core/FunA/Prefab.asset', './Core/FunA/Agentic/DEBUG.md',
                      './Core/README.md', '只修改 Mgr.cs', '所有 Markdown 记忆',
-                     '波及', '都会看的那一层', '就地记',
+                     '出事那块目录自己的 README/Agentic', '凡是动这块东西的人都得先看', '死机级',
                      '单一有效正文', '按需读取', '不扩大权限'):
             with self.subTest(term=term):
                 self.assertIn(term, section)
@@ -198,7 +198,7 @@ class DirectoryContextTests(unittest.TestCase):
             text = (SKILL/f'templates/module-{kind}.md').read_text(encoding='utf-8')
             header = text.split('\n## ', 1)[0]
             with self.subTest(kind=kind):
-                for term in ('波及', '都会看的那一层', '就地记', '按需读取', '入口'):
+                for term in ('出事那块目录自己的 README/Agentic', '凡是动这块东西的人都得先看', '死机级', '按需读取', '入口'):
                     self.assertIn(term, header)
         debug = (SKILL/'templates/module-debug.md').read_text(encoding='utf-8')
         for term in ('缺陷与防复发', '关联文件/数据', '单独修改任一关联方', '唯一正文'):

@@ -15,7 +15,7 @@ class HousekeepingTests(unittest.TestCase):
         for path in (ROOT / "README.md", SKILL / "SKILL.md", SKILL / "references/directory-context.md"):
             text = path.read_text(encoding="utf-8")
             with self.subTest(path=path.name):
-                for phrase in ("平时", "打扫", "波及", "都会看的那一层", "就地记", "还差哪些"):
+                for phrase in ("平时", "打扫", "出事那块目录自己的 README/Agentic", "凡是动这块东西的人都得先看", "死机级", "还差哪些"):
                     self.assertIn(phrase, text)
         spec = (SKILL / "references/directory-context.md").read_text(encoding="utf-8")
         for phrase in ("从哪搬到哪", "谁搬的", "旧代码缺注释", "旧脚本没按新规", "不是每次任务", "只读任务"):
