@@ -79,20 +79,19 @@ class DirectoryContextTests(unittest.TestCase):
             self.assertIn(term, index)
 
     def test_existing_memories_migrate_and_readme_header_is_self_contained(self):
-        """OpenAI: 检查旧记忆迁移要求及 README 顶部可独立解释的保护和索引契约。"""
+        """OpenAI: 旧布局归专门打扫，日常记忆仍有可独立理解的入口。"""
         spec = (SKILL/'references/directory-context.md').read_text(encoding='utf-8')
         entry = (SKILL/'SKILL.md').read_text(encoding='utf-8')
         readme = (SKILL/'templates/module-readme.md').read_text(encoding='utf-8')
         header = readme.split('## 业务与边界', 1)[0]
         for text in (spec, entry):
-            for required in ('既有共享记忆也必须迁移', '不是仅新建文件',
-                             '未安装本技能', 'README原有职责与权威索引'):
+            for required in ('平时', '打扫', '未安装本技能', 'README原有职责与权威索引'):
                 self.assertIn(required, text)
         for required in ('未安装本技能', 'README原有职责与权威索引',
                          'Agentic/MEMORY.md', 'Agentic/USER.md', 'Agentic/DEBUG.md',
                          '同级区域上下文', '不是临时文件', '不得擅自删除或改作他用'):
             self.assertIn(required, header)
-        for required in ('不是可选布局', '迁移未完成', '责任人', '仅存放位置改变'):
+        for required in ('从哪搬到哪', '谁搬的', '还差哪些', '不是每次任务', '保留有效正文'):
             self.assertIn(required, spec)
 
     def test_each_file_header_stands_alone_for_an_unfamiliar_agent(self):
@@ -149,12 +148,12 @@ class DirectoryContextTests(unittest.TestCase):
         self.assertNotIn('本轮复现后，可能是保存快照捕获过晚', example)
 
     def test_readme_replaces_legacy_agentic_index_without_losing_protection(self):
-        """OpenAI: 确认 README 接管旧 Agentic 索引且迁移保护条款仍在相关契约中。"""
+        """OpenAI: 打扫保留旧索引的有效知识、链接和人工资料。"""
         guide = (SKILL/'references/agentic.md').read_text(encoding='utf-8')
         spec = (SKILL/'references/directory-context.md').read_text(encoding='utf-8')
         contract = (SKILL/'references/contract.md').read_text(encoding='utf-8')
         for term in ('README.md', '单一有效正文', 'Agentic/', 'AGENTS.md',
-                     '相对链接', '.meta', '迁移未完成'):
+                     '相对链接', '.meta', '还差哪些'):
             self.assertIn(term, guide)
         for text in (guide, spec, contract):
             for stale in ('`Agentic.md` 保留Core模块索引职责',
@@ -163,11 +162,18 @@ class DirectoryContextTests(unittest.TestCase):
                 self.assertNotIn(stale, text)
         self.assertIn('不再新建或续写', guide)
         self.assertIn('README', contract)
+        readme_template = (SKILL/'templates/module-readme.md').read_text(encoding='utf-8')
+        for heading in ('## 依赖、禁止的反向依赖与插件边界',
+                        '## 场景、预制件、资源与装配前提',
+                        '## 生命周期、数据流、线程与清理'):
+            self.assertIn(heading, readme_template)
+        self.assertIn('不得只搬章节标题或链接', guide)
+        self.assertIn('旧 Agentic.md 有价值的相关正文原意迁入', readme_template)
 
     def test_scope_examples_preserve_exact_targets_and_explain_discovery(self):
-        """OpenAI: 核对两个跨文件案例精确映射 DEBUG 归属，规范仍说明发现范围。"""
+        """OpenAI: 两组路径例子不变，存放规则只保留日常直观判断。"""
         spec = (SKILL/'references/directory-context.md').read_text(encoding='utf-8')
-        section = spec.split('### 关联范围决定层级', 1)[-1].split('## 每份文件头部', 1)[0]
+        section = spec.split('### 记在哪里', 1)[-1].split('## 每份文件头部', 1)[0]
         # OpenAI: Check each relationship-to-owner mapping, not just token presence.
         rows = [[cell.strip() for cell in line.strip('|').split('|')]
                 for line in section.splitlines() if line.startswith('| `./Core/')]
@@ -180,20 +186,19 @@ class DirectoryContextTests(unittest.TestCase):
             '`./Core/FunA/Agentic/DEBUG.md`'])
         for term in ('./Core/FunA/ViewModel.cs', './Core/Mgr.cs', './Agentic/DEBUG.md',
                      './Core/FunA/Prefab.asset', './Core/FunA/Agentic/DEBUG.md',
-                     './Core/README.md', '最低充分公共层', '最深公共父目录',
-                     '只修改 Mgr.cs', '上提', '下放', '所有 Markdown 记忆',
-                     '单条知识', '单一有效正文', '按需读取', '共同读取链',
-                     '尚未建立', '不扩大权限'):
+                     './Core/README.md', '只修改 Mgr.cs', '所有 Markdown 记忆',
+                     '波及', '都会看的那一层', '就地记',
+                     '单一有效正文', '按需读取', '不扩大权限'):
             with self.subTest(term=term):
                 self.assertIn(term, section)
 
     def test_each_template_explains_scope_routing_before_its_body(self):
-        """OpenAI: 检查每种模板正文之前都解释关联范围与上提下放的入口规则。"""
+        """OpenAI: 复制模板同样采用简短存放规则，不带旧判定链。"""
         for kind in ('readme', 'memory', 'user', 'debug'):
             text = (SKILL/f'templates/module-{kind}.md').read_text(encoding='utf-8')
             header = text.split('\n## ', 1)[0]
             with self.subTest(kind=kind):
-                for term in ('关联范围', '上提', '下放', '按需读取', '入口', '不漏'):
+                for term in ('波及', '都会看的那一层', '就地记', '按需读取', '入口'):
                     self.assertIn(term, header)
         debug = (SKILL/'templates/module-debug.md').read_text(encoding='utf-8')
         for term in ('缺陷与防复发', '关联文件/数据', '单独修改任一关联方', '唯一正文'):

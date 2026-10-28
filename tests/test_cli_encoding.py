@@ -14,6 +14,7 @@ SCRIPT = ROOT / 'skills/ld-codestyle-online/scripts/maintain.py'
 
 class CliEncodingTests(unittest.TestCase):
     def invoke(self, skill, data, encoding, *args):
+        """OpenAI: 以指定旧控制台编码运行 CLI，保留原始输出字节供协议检查。"""
         env = dict(os.environ, PYTHONUTF8='0', PYTHONIOENCODING=encoding)
         return subprocess.run(
             [sys.executable, '-B', str(SCRIPT), '--skill-root', str(skill),
@@ -21,12 +22,14 @@ class CliEncodingTests(unittest.TestCase):
             env=env, capture_output=True, timeout=10)
 
     def decode(self, result, expected_code):
+        """OpenAI: 先核对退出码及 ASCII 安全性，再解析 CLI 的 JSON 响应。"""
         self.assertEqual(result.returncode, expected_code, repr(result.stderr))
         self.assertTrue(result.stdout.isascii(), repr(result.stdout))
         # OpenAI: Consumers can parse JSON bytes as UTF-8 without guessing a Windows code page.
         return json.loads(result.stdout)
 
     def test_unicode_preferences_and_header_survive_legacy_console_encodings(self):
+        """OpenAI: 验证旧控制台编码下中文偏好持久化、提交头完整及只读生成。"""
         for encoding in ('cp936', 'cp1252'):
             with self.subTest(encoding=encoding), tempfile.TemporaryDirectory() as tmp:
                 root = Path(tmp)
@@ -44,14 +47,15 @@ class CliEncodingTests(unittest.TestCase):
                 before = config_file.read_bytes()
                 summary = '保留中文与 Unicode 🌙 café'
                 result = self.decode(self.invoke(
-                    skill, data, encoding, 'commit-header', '--client', 'Codex',
+                    skill, data, encoding, 'commit-header', '--visibility', 'private', '--client', 'Codex',
                     '--model', 'vendor/model', '--computer-name', 'TEST-PC',
                     '--summary', summary, '--mixed-human'), 0)
                 self.assertEqual(result['header'],
-                                 f'##{display} + 模型：Codex + vendor/model（计算机：TEST-PC） | {summary}')
+                                 f'##{display} + 模型：Codex + vendor/model PC:TEST-PC | {summary}')
                 self.assertEqual(config_file.read_bytes(), before)
 
     def test_unicode_filesystem_errors_remain_machine_readable(self):
+        """OpenAI: 验证含 Unicode 的锁冲突路径仍以 ASCII JSON 报错且不破坏旧锁。"""
         for encoding in ('cp936', 'cp1252'):
             with self.subTest(encoding=encoding), tempfile.TemporaryDirectory() as tmp:
                 root = Path(tmp)
