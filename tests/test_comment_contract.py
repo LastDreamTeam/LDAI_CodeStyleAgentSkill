@@ -10,8 +10,8 @@ SKILL = ROOT / "skills/ld-codestyle-online"
 class CommentContractTests(unittest.TestCase):
     """OpenAI: 防止后续规则改写再次把必填注释弱化为公共成员建议。"""
 
-    def test_required_comments_are_reachable_and_block_delivery(self):
-        """OpenAI: 每个执行入口都应链接同一强制规则，并覆盖旧代码和失败边界。"""
+    def test_required_comments_cover_changes_and_keep_old_debt_separate(self):
+        """OpenAI: 每个执行入口保留新写和改动函数的注释要求，旧账另做打扫。"""
         spec_path = SKILL / "references/comments.md"
         self.assertTrue(spec_path.is_file(), "缺少强制注释与旧代码补齐规范")
         spec = spec_path.read_text(encoding="utf-8")
@@ -19,12 +19,14 @@ class CommentContractTests(unittest.TestCase):
         for term in (
             "所有具名函数", "private", "构造函数", "Unity 生命周期", "局部函数",
             "<summary>", "<param name=", "<returns>", "<inheritdoc/>", "docstring",
-            "核心原理实现位置", "//", "不是二选一", "旧脚本和旧项目",
-            "整个第一方脚本", "不只检查 diff", "禁止提交", "不能报完成",
+            "核心原理实现位置", "//", "不是二选一", "平时", "打扫",
+            "新写和改动的函数", "未改动的旧函数", "还差哪些", "不阻断本次提交",
             "第三方", "生成代码", "[debug]", "不安装 hook/CI", "语义审查",
         ):
             with self.subTest(term=term):
                 self.assertIn(term, spec)
+        for stale in ("整个第一方脚本", "不只检查 diff", "禁止提交"):
+            self.assertNotIn(stale, spec)
         for relative in (
             "SKILL.md", "references/contract.md", "references/commit.md",
         ):
