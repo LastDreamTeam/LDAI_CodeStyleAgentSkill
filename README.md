@@ -25,6 +25,35 @@ LD = **LastDream · 最后的梦**。官网：[lastdream.net](https://lastdream.
 - 第三方插件、生成文件、序列化资产和现有公共契约有独立边界。技能不是改写它们的授权，也不能覆盖当前任务范围。
 - 原 `ld-codestyle-v6` 是首版的规范来源；在线版拥有自己的版本号。**同一任务只使用一份确定版本，不叠加旧版与在线版。**
 
+## 区域历史与有限记忆
+
+三份Markdown只承载当前关键摘要；`Agentic/history.sqlite3`精选保留本责任区用户原话、已验证bug修复和踩坑经验的完整记录。按需查历史，不全库注入、不无限分卷。USER/MEMORY/DEBUG默认上限分别为 **4000/6000/6000 Unicode字符**（含头部/索引），是可调整的实现默认值，不是token或用户指定值；80%提示整理。先归档读验、保全旧修订再压缩，范围与隐私边界见[完整规范](skills/ld-codestyle-online/references/memory-history.md)。
+
+下列命令从完整技能目录执行，需Python3.10+。将示例路径与值替换为真实授权区域；不是要求依次全跑，不创建真实项目示例数据：
+
+```sh
+python -B scripts/memory_history.py --area "<实际区域>/Agentic" init --readme "../README.md" --scope "<区域ID>" --description "<负责路径与排除项>" --visibility private
+python -B scripts/memory_history.py --area "<实际区域>/Agentic" add --record "<已核精选记录.json>" --reviewed
+python -B scripts/memory_history.py --area "<实际区域>/Agentic" search "<关键词>" --limit 10 --offset 0
+# 类型与来源日期可组合筛选；此为合成日期示例，范围含首尾日，不按UTC换算
+python -B scripts/memory_history.py --area "<实际区域>/Agentic" search --kind debug --from-date 2026-01-01 --to-date 2026-01-31 --limit 10
+python -B scripts/memory_history.py --area "<实际区域>/Agentic" get "<记录ID>"
+python -B scripts/memory_history.py --area "<实际区域>/Agentic" status
+python -B scripts/memory_history.py --area "<实际区域>/Agentic" verify
+# 只有明确要求调额才执行；不为绕过本次超额自行抬高
+python -B scripts/memory_history.py --area "<实际区域>/Agentic" limits --user 4000 --memory 6000 --debug 6000
+# status提供原文SHA；逐项核原意后提交候选，record-id可重复参数列多个真实来源
+python -B scripts/memory_history.py --area "<实际区域>/Agentic" replace --file USER.md --candidate "<候选摘要.md>" --expected-sha256 "<原文SHA256>" --record-id "<来源ID>" --reviewed
+python -B scripts/memory_history.py --area "<实际区域>/Agentic" snapshot "<replace返回的snapshot_id>"
+# 显式核分享范围和脱敏后跨机交换，输出必须不存在；不直接合并SQLite二进制
+python -B scripts/memory_history.py --area "<实际区域>/Agentic" export --output "<新交换包.json>" --reviewed
+python -B scripts/memory_history.py --area "<实际区域>/Agentic" import --input "<已核交换包.json>" --reviewed
+```
+
+记录格式见[合成用户示例](skills/ld-codestyle-online/templates/history-user.example.json)和[合成Debug示例](skills/ld-codestyle-online/templates/history-debug.example.json)。`--reviewed`不是自动语义/隐私证明；不得照抄示例当真实原话或成功证据。缺库、损坏、超额、旧文漂移或锁冲突停止该项、不截尾。工具不会抓聊天、自动压缩、装后台任务或拦截其他编辑器；交付仍须核真实文件和语义。正式采用时为库及sidecar配置精确忽略/共享策略，勿把私密数据随Git公开。
+
+日期/类型为独立SQL列并带索引；未知日期保留原值并投影为NULL。新库schema 2，旧库不自动原地改写，schema 1交换包可保全原文导入新库；准确格式、日期边界和迁移步骤见[日期与类型](skills/ld-codestyle-online/references/memory-history.md#日期与类型独立sql列和筛选)。
+
 ## 强制源码注释：平时写好，旧账另做打扫
 
 - 平时，新写和改动的函数必须带有效头部文档，包括 private、构造函数、生命周期、测试和内部辅助；C# 等支持 XML 的位置用 XML，其他语言用有效原生文档。
@@ -188,7 +217,7 @@ commit 前核实际目标，push 前复核托管平台可见性；fork/PR目标�
 - **平时顺手放好**：所有 Markdown 记忆都放在它所属目录的 README/Agentic，别随手堆项目根目录或别人模块；平时，一条坑记在出事那块目录自己的 README/Agentic 里。**致命级例外优先**：死机、崩溃、掉数据、工程/存档损坏，要往外挪到「凡是动这块东西的人都得先看」的那一份文件（含它的索引）；XR 就是 XR 那套文件里最外面的那一份，不是项目根，也不是只留在出事那个子目录。条目标注「死机级」，带触发条件和一手证据（版本/提交）。README 是本区域唯一索引，没有新信息就不记。
 - **按需读取但不漏读**：从共同入口和上层适用约定到目标模块，再沿直接依赖补查，不全仓注入。验收时只修改任一关联方，都应能从正常入口发现对应约束；无关模块不应被迫读全文。非致命级示例中 ViewModel/Mgr 联动记在 `./Agentic/DEBUG.md`，FunA 内 ViewModel/Prefab 联动记在 `./Core/FunA/Agentic/DEBUG.md`；若是致命级，后者移到维护 FunA 人人必读的外层入口并标「死机级」，不是固定放项目根，见[完整路径示例与规则](skills/ld-codestyle-online/references/directory-context.md#记在哪里)。
 - **README 真正替代旧 Agentic.md 模块索引**：在授权区域保全有效正文、来源、相对链接和 Unity meta 后收敛，只保留一套有效入口/正文；短期兼容只能指路并列退役条件。仅新增 README、旧文件仍双写，不算迁移完成；`Agentic/` 目录及宿主 `AGENTS.md` 不在替代范围。见[迁移步骤与完成条件](skills/ld-codestyle-online/references/agentic.md)。
-- 整理权限：普通Agent仅在九成以上把握时剔除明显重复或无损整合，否则不动；内容压缩须由专门获授权的审计/辅助模型处理，防止知识丢失和损坏。
+- 整理权限：普通Agent在九成以上把握时做无损整合；已采用精选历史流程的三份有限摘要，可由授权区域维护者先归档读验、保全旧修订再内容压缩。README/人类资料及未采用区域仍由专门获授权的审计/辅助模型处理，不扩权或丢失关键原意。
 
 本组记录均以**参考为主而非绝对**。首次新增的解释、经验与意图摘要默认暂定，依证据自然使用“可能”“预计”“估计”“当前理解”等措辞；已发生的实测结果和真实路径仍准确陈述。`USER.md` 尽可能保留整理后的用户原话意图、条件和例外，区别摘录与摘要，不改写原话来制造不确定性。
 
