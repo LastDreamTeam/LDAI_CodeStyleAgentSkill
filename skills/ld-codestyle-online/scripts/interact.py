@@ -15,6 +15,7 @@ from typing import cast
 
 
 def validate_question(value):
+    """OpenAI: 验证问题身份、文本与选项边界，并复制载荷避免调用者事后改题。"""
     if not isinstance(value, dict):
         raise ValueError('Question must be an object')
     for key in ('request_id', 'session_id', 'revision'):
@@ -48,6 +49,7 @@ class QuestionSession:
     """OpenAI: One immutable question, one answer, monotonic delivery/answer deadlines."""
 
     def __init__(self, question, answer_seconds, delivery_seconds, clock=time.monotonic):
+        """OpenAI: 固定问题快照与单调时钟，分别维护送达和展示后的回答时限。"""
         self.question = validate_question(question)
         for value in (answer_seconds, delivery_seconds):
             if type(value) not in (int, float) or not math.isfinite(value) or not 0 < value <= 86400:
@@ -59,14 +61,17 @@ class QuestionSession:
         self.result = None
 
     def identity(self):
+        """OpenAI: 返回请求、会话和修订三元组，绑定每一次显示确认与回答。"""
         return {key: self.question[key] for key in ('request_id', 'session_id', 'revision')}
 
     def finish(self, outcome, **fields):
+        """OpenAI: 只保存第一个终态；收集答案永不直接授予操作权限。"""
         if self.result is None:
             self.result = {**self.identity(), 'outcome': outcome, 'user_approved': False, **fields}
         return self.result
 
     def check(self):
+        """OpenAI: 根据当前送达阶段处理超时，已有终态不被后续时钟改写。"""
         if self.result is None:
             if self.answer_deadline is not None and self.clock() >= self.answer_deadline:
                 self.finish('timed_out', reason='No answer after display acknowledgement')
@@ -75,18 +80,21 @@ class QuestionSession:
         return self.result
 
     def validate_identity(self, payload):
+        """OpenAI: 拒绝串会话、旧修订和已结束问题的请求，不接纳迟到答案。"""
         if not isinstance(payload, dict) or any(payload.get(k) != v for k, v in self.identity().items()):
             raise ValueError('Question/session/revision mismatch')
         if self.check() is not None:
             raise ValueError('Question expired or already resolved')
 
     def ready(self, payload):
+        """OpenAI: 首次真实展示确认才开始回答计时，重复确认不延长窗口。"""
         self.validate_identity(payload)
         if self.answer_deadline is None:
             self.answer_deadline = self.clock() + self.answer_seconds
         return {'status': 'display_acknowledged', **self.identity()}
 
     def answer(self, payload):
+        """OpenAI: 检查已展示状态、动作和答案内容，再形成不可覆盖的回答终态。"""
         self.validate_identity(payload)
         if self.answer_deadline is None:
             raise ValueError('Question not yet displayed')
@@ -112,6 +120,7 @@ class QuestionServer(ThreadingHTTPServer):
     block_on_close = False
 
     def __init__(self, session):
+        """OpenAI: 仅绑定数字loopback，生成一次性能力令牌并限制并发请求数。"""
         self.session = session
         self.token = secrets.token_urlsafe(32)
         self.guard = threading.Lock()
@@ -122,16 +131,19 @@ class QuestionServer(ThreadingHTTPServer):
         self.timeout = 0.2
 
     def server_bind(self):
+        """OpenAI: 绑定本机数字地址而不做反向DNS，避免阻塞吞掉交互时限。"""
         # OpenAI: Numeric loopback needs no reverse DNS, which can exhaust the delivery deadline.
         TCPServer.server_bind(self)
         self.server_name, self.server_port = self.server_address[:2]
 
     def get_request(self):
+        """OpenAI: 接收连接并限制每个socket的读写等待，避免慢请求无限占用线程。"""
         sock, address = super().get_request()
         sock.settimeout(2)
         return sock, address
 
     def process_request(self, request, client_address):
+        """OpenAI: 有界接纳HTTP工作线程；满额立即关连接，启动失败归还槽位。"""
         if not self.slots.acquire(blocking=False):
             self.shutdown_request(request)
             return
@@ -142,6 +154,7 @@ class QuestionServer(ThreadingHTTPServer):
             raise
 
     def process_request_thread(self, request, client_address):
+        """OpenAI: 无论请求成功或异常都归还并发槽位，socket清理由父实现负责。"""
         try:
             super().process_request_thread(request, client_address)
         finally:
@@ -153,12 +166,15 @@ class QuestionHandler(BaseHTTPRequestHandler):
 
     @property
     def host(self):
+        """OpenAI: 提供带具体类型的所属服务器引用，不创建第二个交互实例。"""
         return cast(QuestionServer, self.server)
 
     def log_message(self, format, *args):
+        """OpenAI: 禁用默认访问日志，避免URL及交互内容进入终端日志。"""
         pass
 
     def reply(self, status, value, content_type='application/json; charset=utf-8'):
+        """OpenAI: 发送准确长度的UTF-8响应及隔离头；写失败交给请求生命周期处理。"""
         raw = value if isinstance(value, bytes) else json.dumps(value, ensure_ascii=False).encode('utf-8')
         self.send_response(status)
         self.send_header('Content-Type', content_type)
@@ -172,6 +188,7 @@ class QuestionHandler(BaseHTTPRequestHandler):
         self.wfile.write(raw)
 
     def authorized(self, *, secret=True, origin=False):
+        """OpenAI: 按端点核精确Host、Origin和随机令牌，不把同机恶意程序当安全边界。"""
         # OpenAI: A same-machine adversary is outside this capability-token boundary.
         if self.headers.get('Host') != self.host.host_header:
             return False
@@ -180,6 +197,7 @@ class QuestionHandler(BaseHTTPRequestHandler):
         return not secret or secrets.compare_digest(self.headers.get('X-LD-Token', ''), self.host.token)
 
     def do_GET(self):
+        """OpenAI: 仅提供固定静态资源与当前问题，不开放任意文件或执行接口。"""
         if not self.authorized(secret=self.path not in ('/', '/app.js')):
             self.reply(403, {'error': 'Invalid local request'})
             return
@@ -192,11 +210,14 @@ class QuestionHandler(BaseHTTPRequestHandler):
             with self.host.guard:
                 result = self.host.session.check()
                 body = self.host.session.question if result is None else {'error': 'Question expired or resolved'}
-            self.reply(200 if result is None else 409, body)
+                # OpenAI: GET检查也可能设置超时终态；错误响应同样先完成再允许主循环退出。
+                self.reply(200 if result is None else 409, body)
+                self.wfile.flush()
         else:
             self.reply(404, {'error': 'Not found'})
 
     def do_POST(self):
+        """OpenAI: 接收有界JSON确认/回答；完整回包后才向主循环暴露回答终态。"""
         if not self.authorized(origin=True):
             self.reply(403, {'error': 'Invalid local request'})
             return
@@ -220,13 +241,16 @@ class QuestionHandler(BaseHTTPRequestHandler):
         except (ValueError, UnicodeError, OSError):
             self.reply(400, {'error': 'Invalid or incomplete JSON body'})
             return
-        try:
-            with self.host.guard:
+        with self.host.guard:
+            try:
                 method = self.host.session.ready if self.path == '/ready' else self.host.session.answer
                 result = method(payload)
-            self.reply(200, result)
-        except ValueError as exc:
-            self.reply(409, {'error': str(exc)})
+                # OpenAI: daemon工作线程可能随CLI退出被截断；主循环须等响应体写完再看到终态。
+                self.reply(200, result)
+            except ValueError as exc:
+                # OpenAI: 身份校验可先发现到期再抛异常；409回复仍处于同一终态保护范围。
+                self.reply(409, {'error': str(exc)})
+            self.wfile.flush()
 
 
 ASSESSMENT_FLAGS = ('authorized', 'reversible', 'direction_clear', 'low_risk',
@@ -235,6 +259,7 @@ ASSESSMENT_FLAGS = ('authorized', 'reversible', 'direction_clear', 'low_risk',
 
 def assess_nonresponse(outcome, *, authorized=None, reversible=None, direction_clear=None,
                        low_risk=None, needs_new_approval=None, depends_on_pending=None):
+    """OpenAI: 将回答或缺席结果映射为有限下一步，不以沉默、路由失败或取消生成批准。"""
     # OpenAI: Route/answer/abort outcomes never masquerade as an unresponsive human.
     flags = (authorized, reversible, direction_clear, low_risk, needs_new_approval, depends_on_pending)
     if not all(value is None for value in flags) and any(type(value) is not bool for value in flags):
@@ -264,6 +289,7 @@ def assess_nonresponse(outcome, *, authorized=None, reversible=None, direction_c
 
 
 def read_assessment(path, identity):
+    """OpenAI: 读取有界、与当前问题绑定的调用者安全评估；该材料不是批准令牌。"""
     # OpenAI: An optional, question-bound caller evaluation is evidence to review, not an approval token.
     if path is None:
         return None
@@ -284,12 +310,14 @@ def read_assessment(path, identity):
 
 
 def result_with_assessment(result, metadata, assessment=None):
+    """OpenAI: 合并结果、实际配置来源与评估决定，保留尚需记录和处理的边界。"""
     flags = {} if assessment is None else {key: assessment[key] for key in ASSESSMENT_FLAGS}
     return {**result, **metadata, **assess_nonresponse(result['outcome'], **flags),
             'assessment': assessment}
 
 
 def main():
+    """OpenAI: 运行单次宿主路由或本机询问，用ASCII JSON报告结果并释放锁和监听端口。"""
     import hashlib
     import subprocess
     import sys
