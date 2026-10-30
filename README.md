@@ -22,7 +22,8 @@ LD = **LastDream · 最后的梦**。官网：[lastdream.net](https://lastdream.
 
 - **当前主要适用于 Unity 重型项目。**Unity 工程已经采用 LD 约定，或用户明确要求采用时，才应用对应治理规则；安装技能并不意味着接管所有 Unity 工程。
 - **其他类型项目不强制、不直接启用。**必须由用户明确要求 Agent 使用此技能，再确认语言和项目是否适合面向对象、接口/抽象层、可替换实现等特性。按实际适用范围裁剪，不把 Unity 目录、生命周期或 Inspector 规则硬套到别的技术栈。
-- 第三方插件、生成文件、序列化资产和现有公共契约有独立边界。技能不是改写它们的授权，也不能覆盖当前任务范围。
+- 第三方插件、生成文件、序列化资产和现有公共契约有独立边界。技能不是改写它们的授权，也不能覆盖当前任务范围。插件优先项目侧扩展；确有必要的侵入改写须最小化、就地标记，并在插件目录外的必读入口登记清单，升级后按清单补回，见[插件纯净与必要改写](skills/ld-codestyle-online/references/contract.md#插件纯净与必要改写)。
+- 本次新写和改动的代码按工程格式配置与周边风格整理，保持原编码与换行，不全文件重排未改动代码；整体格式化单独提交，见[代码格式整理](skills/ld-codestyle-online/references/contract.md#代码格式整理)。
 - 原 `ld-codestyle-v6` 是首版的规范来源；在线版拥有自己的版本号。**同一任务只使用一份确定版本，不叠加旧版与在线版。**
 
 ## 区域历史与有限记忆
@@ -238,7 +239,7 @@ commit 前核实际目标，push 前复核托管平台可见性；fork/PR目标�
 
 ## 版本与贡献
 
-技能名固定为 `ld-codestyle-online`，本分支准备 **0.4.0**（公开提交隐私规则；`commit-header`新增必填可见性参数），尚未合并或发布。已发布版本 **0.3.1** 及其 [Release 包](https://github.com/LastDreamTeam/LDAI_CodeStyleAgentSkill/releases/tag/v0.3.1) 保持不变，见 [CHANGELOG.md](CHANGELOG.md)。更新不是通过改技能名为 v7、v8 来分发；配置schema仍为1，原地升级保留偏好，自动更新默认关闭，运行中任务保持原规则版本。
+技能名固定为 `ld-codestyle-online`，当前版本 **0.4.0**（公开提交隐私、区域精选历史与有限摘要、强制注释、代码格式整理与插件必要改写登记；`commit-header`新增必填可见性参数），见 [Release 包](https://github.com/LastDreamTeam/LDAI_CodeStyleAgentSkill/releases/tag/v0.4.0) 与 [CHANGELOG.md](CHANGELOG.md)。此前版本的 tag 与附件保持不变。更新不是通过改技能名为 v7、v8 来分发；配置schema仍为1，原地升级保留偏好，自动更新默认关闭，运行中任务保持原规则版本。
 
 Release ZIP用于允许文件包安装的宿主，不绕过原生管理器审批，也不具有Git fast-forward更新能力；现有Git/Hermes安装仍走原管理方式，不用ZIP覆盖。升级前内容可从 [legacy备份分支](https://github.com/LastDreamTeam/LDAI_CodeStyleAgentSkill/tree/legacy/main-20261016-6aa86d5) 核对。
 
