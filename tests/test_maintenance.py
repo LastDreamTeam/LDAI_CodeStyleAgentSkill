@@ -13,11 +13,13 @@ SCRIPT = ROOT / 'skills/ld-codestyle-online/scripts/maintain.py'
 
 class MaintenanceTests(unittest.TestCase):
     def run_cli(self, install, data, *args):
+        """OpenAI: 运行真实维护CLI并将所有偏好隔离在临时安装数据根。"""
         return subprocess.run([sys.executable, '-B', str(SCRIPT), '--skill-root', str(install),
                                '--data-root', str(data), *args], capture_output=True, text=True,
                               encoding='utf-8', timeout=15)
 
     def test_config_is_per_install_and_persists_human_name(self):
+        """OpenAI: 验证不同安装偏好隔离、每日默认值及人类标记持久化。"""
         self.assertTrue(SCRIPT.is_file(), 'configuration helper must exist')
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -31,11 +33,14 @@ class MaintenanceTests(unittest.TestCase):
             self.assertNotEqual(va['data_dir'], vb['data_dir'])
             self.assertEqual(va['config']['human_name'], '梦')
             self.assertEqual(vb['config']['human_name'], 'LD')
-            self.assertEqual(vb['config']['interval_days'], 7)
+            self.assertEqual(vb['config']['interval_days'], 1)
+            self.assertEqual(vb['effective_interval_days'], 1)
+            self.assertEqual(vb['health']['status'], 'unknown')
             again = self.run_cli(root/'codex-cli', root/'data', 'show')
             self.assertEqual(json.loads(again.stdout)['config']['human_name'], '梦')
 
-    def test_auto_update_is_opt_in_persistent_and_per_install(self):
+    def test_auto_update_defaults_on_and_preserves_legacy_false(self):
+        """OpenAI: 新实例与缺字段用新默认，旧false和周期原样保留且可显式开启。"""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             install, other, data = root/'install', root/'other', root/'data'
@@ -44,52 +49,86 @@ class MaintenanceTests(unittest.TestCase):
             result = self.run_cli(install, data, 'show')
             self.assertEqual(result.returncode, 0, result.stderr)
             value = json.loads(result.stdout)
-            self.assertIs(value['config'].get('auto_update'), False)
-            legacy = {'schema_version': 1, 'human_name': '保留', 'interval_days': 9}
+            self.assertIs(value['config']['auto_update'], True)
+            legacy = {'schema_version': 1, 'human_name': '保留', 'interval_days': 9,
+                      'auto_update': False, 'custom_preference': 'keep'}
             config_file = Path(value['data_dir'])/'config.json'
             config_file.write_text(json.dumps(legacy), encoding='utf-8')
             result = self.run_cli(install, data, 'show')
             self.assertEqual(result.returncode, 0, result.stderr)
             value = json.loads(result.stdout)
+            # OpenAI: Old defaults and deliberate choices are indistinguishable; never silently clear false.
             self.assertIs(value['config']['auto_update'], False)
             self.assertEqual(value['config']['human_name'], '保留')
             self.assertEqual(value['config']['interval_days'], 9)
+            self.assertEqual(value['config']['custom_preference'], 'keep')
+            self.assertEqual(value['effective_interval_days'], 1)
+            self.assertTrue(value['health']['dirty'])
+            self.assertIn('auto_update_disabled', value['health']['reasons'])
+            self.assertIn('explicitly enable', ' '.join(value['health']['notes']))
             result = self.run_cli(install, data, 'config', '--auto-update', 'on')
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertIs(json.loads(result.stdout)['config']['auto_update'], True)
+            self.assertEqual(json.loads(result.stdout)['config']['interval_days'], 9)
             result = self.run_cli(install, data, 'show')
             self.assertIs(json.loads(result.stdout)['config']['auto_update'], True)
             result = self.run_cli(other, data, 'show')
-            self.assertIs(json.loads(result.stdout)['config']['auto_update'], False)
+            self.assertIs(json.loads(result.stdout)['config']['auto_update'], True)
             result = self.run_cli(install, data, 'config', '--auto-update', 'off')
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertIs(json.loads(result.stdout)['config']['auto_update'], False)
+            legacy.pop('auto_update')
+            config_file.write_text(json.dumps(legacy), encoding='utf-8')
+            result = self.run_cli(install, data, 'show')
+            self.assertIs(json.loads(result.stdout)['config']['auto_update'], True)
             bad = dict(legacy, auto_update='false')
             raw = json.dumps(bad)
             config_file.write_text(raw, encoding='utf-8')
             result = self.run_cli(install, data, 'show')
-            self.assertNotEqual(result.returncode, 0)
+            self.assertEqual(result.returncode, 1)
             self.assertEqual(config_file.read_text(encoding='utf-8'), raw)
+            self.assertIn('config_invalid', json.loads(result.stdout)['health']['reasons'])
 
-    def test_weekly_check_throttles_network_and_records_success(self):
+    def test_new_interval_writes_accept_only_daily_and_do_not_clear_legacy(self):
+        """OpenAI: 拒绝新的非每日设置且不改旧偏好，允许用户显式收敛为1。"""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            install, data = root/'install', root/'data'
+            install.mkdir()
+            value = json.loads(self.run_cli(install, data, 'show').stdout)
+            config_file = Path(value['config_path'])
+            legacy = dict(value['config'], interval_days=14)
+            config_file.write_text(json.dumps(legacy), encoding='utf-8')
+            original = config_file.read_bytes()
+            result = self.run_cli(install, data, 'config', '--interval-days', '14')
+            self.assertEqual(result.returncode, 1)
+            self.assertEqual(config_file.read_bytes(), original)
+            result = self.run_cli(install, data, 'config', '--interval-days', '1')
+            self.assertEqual(result.returncode, 0, result.stdout)
+            self.assertEqual(json.loads(result.stdout)['config']['interval_days'], 1)
+
+    def test_daily_check_throttles_force_and_records_success(self):
+        """OpenAI: 旧周频配置也执行24小时上限，force不能提前触网。"""
         import importlib.util
         from unittest.mock import Mock
         spec = importlib.util.spec_from_file_location('maintenance', SCRIPT)
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
-        self.assertTrue(callable(getattr(module, 'check', None)), 'weekly check must exist')
+        self.assertTrue(callable(getattr(module, 'check', None)), 'daily check must exist')
         with tempfile.TemporaryDirectory() as tmp:
             directory = Path(tmp)
             fetch = Mock(return_value={'name': 'ld-codestyle-online', 'version': '0.2.0'})
-            result = module.check(directory, module.DEFAULTS, '0.1.0', fetch=fetch, now=1000000)
+            config = dict(module.DEFAULTS, interval_days=7)
+            result = module.check(directory, config, '0.1.0', fetch=fetch, now=1000000)
             self.assertEqual(result['status'], 'update_available')
-            result = module.check(directory, module.DEFAULTS, '0.1.0', fetch=fetch, now=1000060)
-            self.assertEqual(result['status'], 'not_due')
+            # OpenAI: Test the exact boundary and reversed clock, not only an arbitrary nearby moment.
+            for now in (1000060, 1000000 + 86400 - 1, 999999):
+                result = module.check(directory, config, '0.1.0', fetch=fetch, now=now, force=True)
+                self.assertEqual(result['status'], 'not_due')
             self.assertEqual(fetch.call_count, 1)
             state = json.loads((directory/'state.json').read_text())
             self.assertEqual(state['last_success_at'], 1000000)
-            result = module.check(directory, module.DEFAULTS, '0.1.0', fetch=fetch,
-                                  now=1000000 + 7*24*60*60)
+            result = module.check(directory, config, '0.1.0', fetch=fetch, now=1000000 + 86400)
             self.assertEqual(result['status'], 'update_available')
             self.assertEqual(fetch.call_count, 2)
 

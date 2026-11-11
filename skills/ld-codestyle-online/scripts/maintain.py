@@ -3,11 +3,12 @@
 import argparse
 from contextlib import contextmanager
 import hashlib
+import importlib.util
 import json
+import math
 import os
 from pathlib import Path
 import re
-import socket
 import subprocess
 import tempfile
 import time
@@ -17,7 +18,9 @@ REPO = 'LastDreamTeam/LDAI_CodeStyleAgentSkill'
 # OpenAI: The sole previous repository name is an explicit alias, not a wildcard trust rule.
 OFFICIAL_REPOS = (REPO, 'LastDreamTeam/LDCodeStyleAgentSkill')
 DEFAULTS = {'schema_version': 1, 'human_name': 'LD', 'human_commit_name': '主人',
-            'interval_days': 7, 'auto_update': False}
+            'interval_days': 1, 'auto_update': True}
+CHECK_INTERVAL_SECONDS = 24 * 60 * 60
+HEALTH_SCHEMA_VERSION = 1
 INTERACTION_DEFAULTS = {'enabled': True, 'answer_wait_minutes': 15, 'idle_after_minutes': 0}
 
 
@@ -32,11 +35,12 @@ def load_json(path, default):
 
 
 def save_json(path, value):
-    """OpenAI: 先写入同目录临时文件并同步，再原子替换目标 JSON。"""
+    """OpenAI: 拒绝非标准数字，先写入同目录临时文件并同步，再原子替换JSON。"""
+    # OpenAI: Failed serialization leaves the previous document intact, never a partially written snapshot.
     fd, name = tempfile.mkstemp(prefix='.writing-', dir=path.parent)
     try:
         with os.fdopen(fd, 'w', encoding='utf-8') as out:
-            json.dump(value, out, ensure_ascii=False, indent=2)
+            json.dump(value, out, ensure_ascii=False, indent=2, allow_nan=False)
             out.write('\n')
             out.flush()
             os.fsync(out.fileno())
@@ -106,7 +110,7 @@ def interaction_config(config):
 def config_at(directory):
     """OpenAI: 读取 schema-1 偏好并补齐兼容默认项；不在读取阶段迁移写盘。"""
     config = load_json(directory / 'config.json', DEFAULTS)
-    if config.get('schema_version') != 1:
+    if type(config.get('schema_version')) is not int or config['schema_version'] != 1:
         raise ValueError('Unsupported configuration schema; no automatic migration')
     name = config.get('human_name')
     if not isinstance(name, str) or not re.fullmatch(r'[\w\-\u4e00-\u9fff]{1,40}', name):
@@ -114,8 +118,9 @@ def config_at(directory):
     days = config.get('interval_days')
     if type(days) is not int or not 1 <= days <= 365:
         raise ValueError('interval_days must be an integer between 1 and 365')
-    # OpenAI: Older schema-1 installs inherit the safer opt-in policy, preserving all preferences.
-    config.setdefault('auto_update', False)
+    # OpenAI: Missing preferences adopt the new default; an existing false may be deliberate.
+    # Preserve false and legacy intervals verbatim; health explains how to explicitly opt in.
+    config.setdefault('auto_update', True)
     if type(config['auto_update']) is not bool:
         raise ValueError('auto_update must be a boolean')
     config.setdefault('human_commit_name', '主人')
@@ -142,31 +147,171 @@ def fetch_version():
     return json.loads(raw)
 
 
-def check(directory, config, current, *, fetch=None, now=None, force=False):
-    """OpenAI: 按间隔检查上游版本，记录尝试、成功或错误状态并返回更新判定。"""
-    now = time.time() if now is None else now
+def state_at(directory):
+    """OpenAI: 校验兼容状态与时间戳；损坏数据不得被当成首次检查绕过节流。"""
     state = load_json(directory / 'state.json', {'schema_version': 1})
-    if state.get('schema_version') != 1:
+    if type(state.get('schema_version')) is not int or state['schema_version'] != 1:
         raise ValueError('Unsupported state schema')
-    last = state.get('last_attempt_at')
-    if not force and last is not None and 0 <= now - last < config['interval_days'] * 86400:
-        return {'status': 'not_due', 'state': state, 'current_version': current}
-    # OpenAI: 先记录尝试时间再触网；即使抓取失败也受同一间隔约束，避免失败后密集重试。
-    state['last_attempt_at'] = now
+    for key in ('last_error', 'last_update_error'):
+        if state.get(key) is not None and not isinstance(state[key], str):
+            raise ValueError(f'Invalid state error field: {key}')
+    # OpenAI: Reject booleans/NaN as timestamps before subtraction; unknown state stays fail-closed.
+    for key in ('last_attempt_at', 'last_success_at', 'last_update_attempt_at', 'last_updated_at'):
+        value = state.get(key)
+        if value is not None and (type(value) not in (int, float) or not math.isfinite(value) or value < 0):
+            raise ValueError(f'Invalid state timestamp: {key}')
+    if state.get('latest_version') is not None:
+        version_tuple(state['latest_version'])
+    return state
+
+
+def within_daily_window(timestamp, now):
+    """OpenAI: 最近尝试未满24小时或时钟倒退时禁止重试，不接受force豁免。"""
+    # OpenAI: A future timestamp may indicate a reversed clock, never permission to retry early.
+    return timestamp is not None and now - timestamp < CHECK_INTERVAL_SECONDS
+
+
+def health_snapshot(directory, config, current, state, *, now=None, issues=()):
+    """OpenAI: 仅凭本地事实计算健康快照；缺证据、过期和失败均不能报健康。"""
+    now = time.time() if now is None else now
+    reasons = list(issues)
+    notes = []
+    auto_update = config.get('auto_update') if config is not None else None
+    if auto_update is False:
+        reasons.append('auto_update_disabled')
+        notes.append('Existing auto_update=false is preserved; explicitly enable automatic updates if desired.')
+    elif auto_update is not True:
+        reasons.append('auto_update_unknown')
+    if config is not None and config['interval_days'] != 1:
+        notes.append('Stored interval_days is preserved; the effective check interval is always one day.')
+    try:
+        installed = version_tuple(current)
+    except (ValueError, TypeError):
+        installed, current = None, None
+        reasons.append('installed_version_unknown')
+    state = state or {}
+    latest = state.get('latest_version')
+    try:
+        upstream = version_tuple(latest)
+    except (ValueError, TypeError):
+        upstream, latest = None, None
+        reasons.append('latest_version_unknown')
+    if installed is not None and upstream is not None and installed < upstream:
+        reasons.append('version_behind')
+    checked_at = state.get('last_success_at')
+    age = None if checked_at is None else now - checked_at
+    freshness = 'unknown'
+    if age is not None:
+        if age < 0:
+            reasons.append('clock_rollback')
+        elif age >= CHECK_INTERVAL_SECONDS:
+            freshness = 'stale'
+            reasons.append('check_stale')
+        else:
+            freshness = 'fresh'
+    else:
+        reasons.append('check_unknown')
+    # OpenAI: A fresh older success must not hide a newer failed/interrupted check or update.
+    if state.get('last_error'):
+        reasons.append('check_failed')
+    if state.get('last_attempt_at') is not None and (
+            checked_at is None or state['last_attempt_at'] > checked_at):
+        reasons.append('check_incomplete')
+    if state.get('last_update_error'):
+        reasons.append('update_failed')
+    if state.get('last_update_attempt_at') is not None and (
+            state.get('last_updated_at') is None
+            or state['last_update_attempt_at'] > state['last_updated_at']):
+        reasons.append('update_incomplete')
+    if any(state.get(key) is not None and state[key] > now
+           for key in ('last_attempt_at', 'last_update_attempt_at', 'last_updated_at')):
+        reasons.append('clock_rollback')
+    reasons = list(dict.fromkeys(reasons))
+    unknown = any(reason.endswith('_unknown') or reason.endswith('_invalid') for reason in reasons)
+    return {'schema_version': HEALTH_SCHEMA_VERSION, 'skill': NAME,
+            'status': ('unknown' if unknown else 'dirty') if reasons else 'healthy',
+            'installed_version': current, 'latest_version': latest, 'auto_update': auto_update,
+            'dirty': bool(reasons), 'reasons': reasons, 'notes': notes,
+            'checked_at': checked_at, 'last_attempt_at': state.get('last_attempt_at'),
+            'freshness': freshness, 'age_seconds': age,
+            'expires_at': None if checked_at is None else checked_at + CHECK_INTERVAL_SECONDS,
+            'evaluated_at': now, 'effective_interval_days': 1,
+            'check_error': state.get('last_error'), 'update_error': state.get('last_update_error'),
+            'health_path': str(directory / 'health.json')}
+
+
+def persist_health(directory, config, current, state, *, now=None, issues=()):
+    """OpenAI: 原子保存由本地事实生成的标准健康快照，并返回同一对象。"""
+    snapshot = health_snapshot(directory, config, current, state, now=now, issues=issues)
+    # OpenAI: Readers see either a complete prior snapshot or a complete replacement, never partial JSON.
+    save_json(directory / 'health.json', snapshot)
+    return snapshot
+
+
+def refresh_health(skill, directory, *, now=None):
+    """OpenAI: 离线重读磁盘配置、清单和状态；错误转为未知健康，不重置原文件。"""
+    issues = []
+    config, current, state = None, None, {}
+    try:
+        config = config_at(directory)
+    except (OSError, ValueError, TypeError):
+        issues.append('config_invalid')
+    try:
+        current = load_json(skill / 'assets/version.json', {}).get('version')
+    except (OSError, ValueError, TypeError):
+        issues.append('installed_manifest_invalid')
+    try:
+        state = state_at(directory)
+    except (OSError, ValueError, TypeError):
+        issues.append('state_invalid')
+    # OpenAI: Do not trust a previous health.json after local edits; recompute without networking.
+    return persist_health(directory, config, current, state, now=now, issues=issues)
+
+
+def health_gate(snapshot, *, require_healthy=False, min_version=None, require_version=None):
+    """OpenAI: 计算调用方选择的版本/健康门禁；0通过，4版本不符，3非健康。"""
+    minimum = version_tuple(min_version) if min_version is not None else None
+    exact = version_tuple(require_version) if require_version is not None else None
+    installed = snapshot.get('installed_version')
+    installed = version_tuple(installed) if installed is not None else None
+    # OpenAI: A version constraint is independent of freshness; only an explicit healthy gate enforces both.
+    if (minimum is not None and (installed is None or installed < minimum)) or (
+            exact is not None and installed != exact):
+        return 4
+    if require_healthy and (snapshot['status'] != 'healthy' or snapshot['dirty']):
+        return 3
+    return 0
+
+
+def check(directory, config, current, *, fetch=None, now=None, force=False):
+    """OpenAI: 每24小时最多联网检查一次，含失败；force兼容保留但不得越过上限。"""
+    now = time.time() if now is None else now
+    version_tuple(current)
+    state = state_at(directory)
+    if within_daily_window(state.get('last_attempt_at'), now):
+        health = persist_health(directory, config, current, state, now=now)
+        return {'status': 'not_due', 'state': state, 'current_version': current,
+                'latest_version': state.get('latest_version'), 'health': health, 'network_checked': False}
+    # OpenAI: Reserve the attempt before touching the network; a killed process cannot appear healthy.
+    state.update(last_attempt_at=now, last_error='check_in_progress')
     save_json(directory / 'state.json', state)
+    persist_health(directory, config, current, state, now=now)
     try:
         manifest = (fetch or fetch_version)()
-        if manifest.get('name') != NAME:
+        if not isinstance(manifest, dict) or manifest.get('name') != NAME:
             raise ValueError('Unexpected upstream skill identity')
         latest = manifest['version']
         available = version_tuple(latest) > version_tuple(current)
         state.update(last_success_at=now, latest_version=latest, last_error=None)
         save_json(directory / 'state.json', state)
+        health = persist_health(directory, config, current, state, now=now)
         return {'status': 'update_available' if available else 'up_to_date',
-                'state': state, 'current_version': current, 'latest_version': latest}
+                'state': state, 'current_version': current, 'latest_version': latest,
+                'health': health, 'network_checked': True}
     except Exception as exc:
         state['last_error'] = type(exc).__name__
         save_json(directory / 'state.json', state)
+        persist_health(directory, config, current, state, now=now)
         raise
 
 
@@ -308,28 +453,30 @@ def apply_update(skill, directory):
     return receipt
 
 
-def synchronize(skill, directory, config, *, idle, force=False, approved=False, fetch=None, updater=None):
-    """OpenAI: 协调版本检查、用户同意、空闲条件、重试间隔和更新后版本核验。"""
+def synchronize(skill, directory, config, *, idle, force=False, approved=False, fetch=None, updater=None,
+                now=None):
+    """OpenAI: 在空档应用新鲜缓存的新版本；检查及后端尝试各受24小时硬上限。"""
+    now = time.time() if now is None else now
     current = load_json(skill / 'assets/version.json', {})['version']
-    result = check(directory, config, current, force=force, fetch=fetch)
+    result = check(directory, config, current, force=force, fetch=fetch, now=now)
     state = result['state']
-    latest = state.get('latest_version', current)
-    if version_tuple(latest) <= version_tuple(current):
+    latest = state.get('latest_version')
+    if (latest is None or version_tuple(latest) <= version_tuple(current)
+            or state.get('last_error') or result['health']['freshness'] != 'fresh'):
         return result
     if config.get('auto_update') is not True and not approved:
-        # OpenAI: Frequency bypass is not consent; do not re-prompt within the same interval.
+        # OpenAI: A legacy false remains a preference; checking never silently re-enables updates.
         if result['status'] == 'not_due':
             return result
         return {**result, 'status': 'update_confirmation_required'}
     if not idle:
         return {**result, 'status': 'deferred_until_idle'}
-    now = time.time()
-    attempt = state.get('last_update_attempt_at')
-    if not force and attempt is not None and 0 <= now - attempt < config['interval_days'] * 86400:
+    if within_daily_window(state.get('last_update_attempt_at'), now):
         return {**result, 'status': 'update_retry_not_due'}
-    state['last_update_attempt_at'] = now
+    state.update(last_update_attempt_at=now, last_update_error='update_in_progress')
     save_json(directory / 'state.json', state)
-    # OpenAI: 更新时间戳先落盘，更新器报错时再记录实际可观察到的版本，不能假定回滚成功。
+    persist_health(directory, config, current, state, now=now)
+    # OpenAI: Reserve downloads separately so a cached check can update later today, never retry endlessly.
     try:
         receipt = (updater or apply_update)(skill, directory)
         after = load_json(skill / 'assets/version.json', {})['version']
@@ -342,93 +489,117 @@ def synchronize(skill, directory, config, *, idle, force=False, approved=False, 
         except (OSError, ValueError):
             state['observed_version'] = None
         save_json(directory / 'state.json', state)
+        # OpenAI: A failed native updater may have partially changed files; report the observed disk version.
+        persist_health(directory, config, state['observed_version'], state, now=now)
         raise
     state.update(installed_version=after, observed_version=after,
-                 last_updated_at=time.time(), last_update_error=None)
+                 last_updated_at=now, last_update_error=None)
     save_json(directory / 'state.json', state)
-    return {**result, **receipt, 'status': 'updated', 'installed_version': after}
+    health = persist_health(directory, config, after, state, now=now)
+    return {**result, **receipt, 'status': 'updated', 'installed_version': after, 'health': health}
+
+
+def identity_module():
+    """OpenAI: 从同目录加载纯身份模块，兼容直接CLI与importlib方式导入维护脚本。"""
+    # OpenAI: Resolve relative to this script rather than caller cwd or an unrelated module on sys.path.
+    spec = importlib.util.spec_from_file_location('ld_commit_identity', Path(__file__).with_name('commit_identity.py'))
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 def commit_header(config, model, bot, summary, *, mixed_human=False, client='',
-                  named_bot=False, computer_name=None, visibility=None):
-    """OpenAI: 按已核实的可见性渲染提交首行；公开摘要不读取本机及个人身份。"""
-    # OpenAI: Render an already-reviewed attribution decision; never guess authorship from a word match.
-    if visibility not in ('public', 'private'):
-        raise ValueError('Verify the destination and explicitly select public or private visibility')
-    if visibility == 'public':
-        if (not isinstance(summary, str) or not summary or not summary.isprintable()
-                or summary != summary.strip() or '|' in summary):
-            raise ValueError('Summary must be non-empty single-line text without pipe delimiters')
-        if re.search(r'(?:模型|计算机|(?<![A-Za-z0-9_])PC)\s*[:：]', summary, re.IGNORECASE):
-            raise ValueError('Public summary must not reintroduce model or computer identity fields')
-        return summary
-    for value in (model, summary) + tuple(value for value in (bot, client) if value):
-        if (not isinstance(value, str) or not value or not value.isprintable()
-                or value != value.strip() or '|' in value):
-            raise ValueError('Commit fields must be non-empty single-line text without pipe delimiters')
-    if any(token in value for value in (model, bot or '', client or '')
-           for token in (' + ', '模型：', '计算机：', '##')) or any(
-               re.search(r'(?<![A-Za-z0-9_])PC\s*[:：]', value, re.IGNORECASE)
-               for value in (model, bot or '', client or '')):
-        raise ValueError('Client/Bot/model must not contain extra header identity structure')
-    # Keep the model identifier intact; only explicitly known product aliases are shortened.
-    product_aliases = {'OpenAI Codex': 'Codex', 'OpenAICodex': 'Codex'}
-    bot = product_aliases[bot] if bot in product_aliases else bot
-    client = product_aliases[client] if client in product_aliases else client
-    if bot and client:
-        raise ValueError('Choose a local client or a Bot identity, not both')
-    # These are known non-model labels, not a catalogue of valid or available models.
-    non_models = {'ai', 'agent', 'assistant', 'bot', 'openai', 'anthropic', 'google', 'xai', 'deepseek',
-                  'codex', 'openaicodex', 'claudecode', 'cursor', 'copilot', 'githubcopilot',
-                  'chatgpt', 'deepseekharness', 'vscodecopilot', 'visualstudiocopilot',
-                  'vscode', 'visualstudio', 'otheragentplugin',
-                  'hermes', 'hermesbot', 'unknown', 'auto', 'default', 'latest',
-                  '未知', '待确认', '实际模型标识', '实际模型型号'}
-    normalized_model = re.sub(r'[\s_-]+', '', model).casefold()
-    if (normalized_model in non_models or '<' in model or '>' in model
-            or model.casefold() in {value.casefold() for value in (bot, client) if value}):
-        raise ValueError('A verified exact model identifier is required; product names and placeholders are not models')
-    if named_bot:
-        # OpenAI: The flag attests a reviewed unique identity; familiar product/default names are not unique Bots.
-        default_names = {'ai', 'agent', 'assistant', 'bot', 'dot', 'hermes', 'hermesbot',
-                         'grok', 'grokbot', 'gpt', 'gptbot', 'gptdot', 'chatgpt', 'chatgptbot',
-                         'codex', 'openaicodex', 'claude', 'claudecode', 'cursor', 'vscode',
-                         'visualstudio', 'visualstudiocopilot', 'vscodecopilot', 'copilot',
-                         'githubcopilot', 'deepseekharness', 'otheragentplugin', '助手'}
-        normalized = re.sub(r'[\s_-]+', '', bot).casefold()
-        if not bot or client or normalized in default_names:
-            raise ValueError('named-bot requires a verified distinctive Bot name; default/local clients need a computer name')
-    machine = ''
-    if not named_bot or computer_name is not None:
-        actual = socket.gethostname() if computer_name is None else computer_name
-        if not isinstance(actual, str) or not re.fullmatch(r'[\w.-]{1,253}', actual):
-            raise ValueError('A real computer name is required; verify the execution host, do not invent a fallback')
-        machine = f' PC:{actual}'
-    name = config['human_commit_name']
-    validate_commit_name(name)
-    human = f'{name} + ' if mixed_human else ''
-    actor = bot or client
-    identity = f'{actor} + {model}' if actor else model
-    return f'##{human}模型：{identity}{machine} | {summary}'
+                  named_bot=False, computer_name=None, visibility=None, reasoning_effort=None,
+                  public_name=None, omit_public_identity=False, pc=None):
+    """OpenAI: 兼容旧函数入口并委派独立身份模块；所有新增身份参数显式透传。"""
+    return identity_module().commit_header(
+        config, model, bot, summary, mixed_human=mixed_human, client=client,
+        named_bot=named_bot, computer_name=computer_name, visibility=visibility,
+        reasoning_effort=reasoning_effort, public_name=public_name,
+        omit_public_identity=omit_public_identity, pc=pc)
+
+
+def header_result(args, config):
+    """OpenAI: 将CLI参数映射到身份模块，返回首行和供Git显示名使用的相同身份。"""
+    return identity_module().commit_result(
+        config, args.model, args.bot, args.summary, mixed_human=args.mixed_human,
+        client=args.client, named_bot=args.named_bot, computer_name=args.computer_name,
+        visibility=args.visibility, reasoning_effort=args.reasoning_effort,
+        public_name=args.public_name, omit_public_identity=args.omit_public_identity, pc=args.pc)
+
+
+def maintenance_result(args, skill, directory):
+    """OpenAI: 在调用方持锁期间执行偏好、检查或更新，并返回兼容的CLI结果。"""
+    config = config_at(directory)
+    if args.command == 'config':
+        candidate = dict(config)
+        if args.human_name is not None:
+            candidate['human_name'] = args.human_name
+        if args.human_commit_name is not None:
+            candidate['human_commit_name'] = args.human_commit_name
+        if args.interval_days is not None:
+            # OpenAI: Legacy values survive reads; new writes must not imply unsupported weekly scheduling.
+            if args.interval_days != 1:
+                raise ValueError('The effective interval is daily; new interval_days values must be 1')
+            candidate['interval_days'] = args.interval_days
+        if args.auto_update is not None:
+            candidate['auto_update'] = args.auto_update == 'on'
+        if any(value is not None for value in (args.interaction, args.answer_wait_minutes,
+                                               args.idle_after_minutes)):
+            settings = interaction_config(candidate)
+            if args.interaction is not None:
+                settings['enabled'] = args.interaction == 'on'
+            if args.answer_wait_minutes is not None:
+                settings['answer_wait_minutes'] = args.answer_wait_minutes
+            if args.idle_after_minutes is not None:
+                settings['idle_after_minutes'] = args.idle_after_minutes
+            candidate['interaction'] = settings
+            interaction_config(candidate)
+        if not re.fullmatch(r'[\w\-\u4e00-\u9fff]{1,40}', candidate['human_name']):
+            raise ValueError('Invalid human name')
+        validate_commit_name(candidate['human_commit_name'])
+        config = candidate
+    if args.command == 'commit-header':
+        result = header_result(args, config)
+    else:
+        save_json(directory / 'config.json', config)
+        result = {'state': state_at(directory)}
+        if args.command == 'check':
+            current = load_json(skill / 'assets/version.json', {})['version']
+            result = check(directory, config, current, force=args.force)
+        elif args.command == 'sync':
+            result = synchronize(skill, directory, config, idle=args.idle,
+                                 force=args.force, approved=args.approve_update)
+    return {'data_dir': str(directory), 'config_path': str(directory / 'config.json'),
+            'config': config, 'interaction': interaction_config(config),
+            'effective_interval_days': 1, **result}
 
 
 def main():
-    """OpenAI: 解析维护与提交头命令，公开渲染走免配置路径，其余操作受安装锁保护。"""
+    """OpenAI: 解析CLI并在锁内刷新健康；只有依赖方选择的health门禁返回拒绝码。"""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--skill-root', type=Path, default=Path(__file__).resolve().parents[1])
     parser.add_argument('--data-root', type=Path)
     commands = parser.add_subparsers(dest='command', required=True)
     commands.add_parser('show')
+    health = commands.add_parser('health', help='Recompute and persist local health without network access')
+    health.add_argument('--require-healthy', action='store_true', help='Exit 3 unless fresh and healthy')
+    health.add_argument('--min-version', help='Exit 4 if installed version is unknown or below this stable version')
+    health.add_argument('--require-version', help='Exit 4 unless installed version exactly matches')
     header = commands.add_parser('commit-header', help='Render a header; does not stage, commit, push or inspect Git')
     header.add_argument('--visibility', choices=('public', 'private'), required=True,
-                        help='Caller-verified destination visibility; public omits identity')
-    header.add_argument('--model', help='Verified exact runtime model ID; required for private, never inferred from product')
-    actor = header.add_mutually_exclusive_group()
-    actor.add_argument('--bot', default='')
-    actor.add_argument('--client', default='', help='Product short name, such as Codex; not a vendor or GitHub account')
+                        help='Caller-verified destination visibility')
+    header.add_argument('--model', help='Verified complete runtime model ID; never inferred from product')
+    header.add_argument('--bot', default='')
+    header.add_argument('--client', default='', help='Actual execution framework, such as Codex')
     header.add_argument('--named-bot', action='store_true',
-                        help='Caller verified a distinctive non-default Bot identity; may omit the computer name')
-    header.add_argument('--computer-name', help='Verified execution host rendered as PC:<name>; otherwise query this OS')
+                        help='Caller verified a Bot with its own persistent identity and memory')
+    header.add_argument('--reasoning-effort', help='Actual reasoning strength; none only when no control exists')
+    public = header.add_mutually_exclusive_group()
+    public.add_argument('--public-name', help='Explicitly authorized public display name override')
+    public.add_argument('--omit-public-identity', action='store_true', help='Explicitly authorized public omission')
+    header.add_argument('--pc', help='Explicitly provided computer name; never read from this OS')
+    header.add_argument('--computer-name', help='Compatibility alias for explicitly provided --pc')
     header.add_argument('--summary', required=True)
     header.add_argument('--mixed-human', action='store_true',
                         help='Caller has verified human contribution in the staged change')
@@ -442,7 +613,7 @@ def main():
     configure.add_argument('--idle-after-minutes', type=int)
     for command in ('check', 'sync'):
         sub = commands.add_parser(command)
-        sub.add_argument('--force', action='store_true', help='Bypass time interval only; never overwrite edits')
+        sub.add_argument('--force', action='store_true', help='Compatibility flag; never bypass the 24-hour limit or safety guards')
         if command == 'sync':
             sub.add_argument('--idle', action='store_true', help='Caller confirms no task uses this installation')
             sub.add_argument('--approve-update', action='store_true',
@@ -451,66 +622,49 @@ def main():
     if args.command == 'commit-header' and args.visibility == 'public':
         # OpenAI: Public output never loads local preferences or queries the machine identity.
         try:
-            value = commit_header(None, None, '', args.summary, visibility='public')
-        except ValueError as exc:
+            result = header_result(args, None)
+        except (OSError, ValueError, TypeError) as exc:
             print(json.dumps({'status': 'error', 'error': str(exc)}, ensure_ascii=True))
             return 1
-        print(json.dumps({'header': value, 'visibility': 'public'}, ensure_ascii=True))
+        print(json.dumps(result, ensure_ascii=True))
         return 0
     skill = args.skill_root.resolve()
     directory = data_dir(skill, args.data_root)
+    snapshot = None
+    exit_code = 0
     try:
         with locked(directory):
-            config = config_at(directory)
-            if args.command == 'config':
-                candidate = dict(config)
-                if args.human_name is not None:
-                    candidate['human_name'] = args.human_name
-                if args.human_commit_name is not None:
-                    candidate['human_commit_name'] = args.human_commit_name
-                if args.interval_days is not None:
-                    candidate['interval_days'] = args.interval_days
-                if args.auto_update is not None:
-                    candidate['auto_update'] = args.auto_update == 'on'
-                if any(value is not None for value in (args.interaction, args.answer_wait_minutes,
-                                                       args.idle_after_minutes)):
-                    settings = interaction_config(candidate)
-                    if args.interaction is not None:
-                        settings['enabled'] = args.interaction == 'on'
-                    if args.answer_wait_minutes is not None:
-                        settings['answer_wait_minutes'] = args.answer_wait_minutes
-                    if args.idle_after_minutes is not None:
-                        settings['idle_after_minutes'] = args.idle_after_minutes
-                    candidate['interaction'] = settings
-                    interaction_config(candidate)
-                if not re.fullmatch(r'[\w\-\u4e00-\u9fff]{1,40}', candidate['human_name']):
-                    raise ValueError('Invalid human name')
-                if not 1 <= candidate['interval_days'] <= 365:
-                    raise ValueError('interval_days must be 1..365')
-                validate_commit_name(candidate['human_commit_name'])
-                config = candidate
-            if args.command != 'commit-header':
-                save_json(directory / 'config.json', config)
-            result = {'state': load_json(directory / 'state.json', {})}
-            if args.command == 'check':
-                current = load_json(skill / 'assets/version.json', {})['version']
-                result = check(directory, config, current, force=args.force)
-            elif args.command == 'sync':
-                result = synchronize(skill, directory, config, idle=args.idle,
-                                     force=args.force, approved=args.approve_update)
-            elif args.command == 'commit-header':
-                result = {'header': commit_header(config, args.model, args.bot, args.summary,
-                                                  mixed_human=args.mixed_human, client=args.client,
-                                                  named_bot=args.named_bot, computer_name=args.computer_name,
-                                                  visibility=args.visibility)}
+            if args.command == 'health':
+                # OpenAI: Reject malformed caller constraints before publishing a successful local report.
+                for constraint in (args.min_version, args.require_version):
+                    if constraint is not None:
+                        version_tuple(constraint)
+                snapshot = refresh_health(skill, directory)
+                exit_code = health_gate(snapshot, require_healthy=args.require_healthy,
+                                        min_version=args.min_version, require_version=args.require_version)
+                result = {**snapshot, 'gate_exit_code': exit_code}
+            else:
+                try:
+                    result = maintenance_result(args, skill, directory)
+                finally:
+                    # OpenAI: Refresh while still holding the writer lock, including failed checks/updates.
+                    if args.command != 'commit-header':
+                        snapshot = refresh_health(skill, directory)
+                if snapshot is not None:
+                    result['health'] = snapshot
             # OpenAI: ASCII JSON preserves Unicode values across legacy Windows console encodings.
-            print(json.dumps({'data_dir': str(directory), 'config_path': str(directory/'config.json'),
-                              'config': config, 'interaction': interaction_config(config),
-                              **result}, ensure_ascii=True))
+            print(json.dumps(result, ensure_ascii=True))
     except (OSError, ValueError, KeyError, TypeError, subprocess.TimeoutExpired) as exc:
-        print(json.dumps({'status': 'error', 'error': str(exc)}, ensure_ascii=True))
+        result = {'status': 'error', 'error': str(exc)}
+        if args.command == 'health':
+            # OpenAI: Lock/I/O failures cannot safely persist a new snapshot; stdout must still fail closed.
+            result = {**health_snapshot(directory, None, None, {}, issues=('health_unavailable',)),
+                      **result, 'health_persisted': False}
+        elif snapshot is not None:
+            result['health'] = snapshot
+        print(json.dumps(result, ensure_ascii=True))
         return 1
-    return 0
+    return exit_code
 
 if __name__ == '__main__':
     raise SystemExit(main())

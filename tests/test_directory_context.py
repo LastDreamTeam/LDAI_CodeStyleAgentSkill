@@ -65,14 +65,16 @@ class DirectoryContextTests(unittest.TestCase):
     def test_all_memory_templates_record_dates_and_change_identity(self):
         """OpenAI: 确认共享记忆模板和规范记录日期、条目变更类型及实际修改身份。"""
         spec = (SKILL/'references/directory-context.md').read_text(encoding='utf-8')
+        # OpenAI: 身份按角色和可见性分支，不能再要求所有Bot记录模型。
         for term in ('新增、修改、删除', '##模型：', '文件更新时间不等于验证日期',
-                     '历史日期未知', '条目标识', '删除摘要', '实际模型标识'):
+                     '历史日期未知', '条目标识', '删除摘要', 'Bot', 'Agent', '推理强度'):
             self.assertIn(term, spec)
         for kind in ('readme', 'memory', 'user', 'debug'):
             text = (SKILL/f'templates/module-{kind}.md').read_text(encoding='utf-8')
             with self.subTest(kind=kind):
                 for term in ('创建日期', '最近修改日期', '##模型：', '变更记录',
-                             '新增/修改/删除', '条目标识', '实际模型标识'):
+                             '新增/修改/删除', '条目标识', '私有Bot强制', '不需模型',
+                             '私有Agent强制', '完整具体模型', '实际推理强度', '公开目标默认'):
                     self.assertIn(term, text)
         index = (SKILL/'templates/module-readme.md').read_text(encoding='utf-8')
         for term in ('创建日期', '最近修改日期', '##模型：', '变更记录'):
@@ -106,7 +108,7 @@ class DirectoryContextTests(unittest.TestCase):
                              '不是临时文件', '私有记忆', '不得擅自删除或改作他用',
                              '逻辑作用域', 'README', '当前任务授权', '先读',
                              '九成以上把握', '内容压缩', '专门获授权',
-                             '日期', '实际模型', '来源', '不高于'):
+                             '日期', '实际执行身份', '公开默认昵称/模型名', '来源', '不高于'):
                     self.assertIn(term, header)
                 if kind != 'readme':
                     self.assertIn('../README.md', header)

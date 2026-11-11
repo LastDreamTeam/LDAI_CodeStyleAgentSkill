@@ -27,6 +27,8 @@ class InstallGuideTests(unittest.TestCase):
                               capture_output=True, text=True, encoding='utf-8', timeout=10)
 
     def test_document_installs_complete_link_and_default_config(self):
+        """OpenAI: 验证完整链接可用并加载每日自动更新的新安装默认值。"""
+        # OpenAI: 真实CLI必须经宿主发现路径运行，避免只验证源目录能被读取。
         code = self.link_example()
         with tempfile.TemporaryDirectory() as tmp:
             target = Path(tmp) / 'agent-skills' / NAME
@@ -41,7 +43,8 @@ class InstallGuideTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
             config = json.loads(result.stdout)['config']
             self.assertEqual(config['human_name'], 'LD')
-            self.assertEqual(config['interval_days'], 7)
+            self.assertEqual(config['interval_days'], 1)
+            self.assertTrue(config['auto_update'])
 
     def test_same_install_is_reused_without_overwrite(self):
         code = self.link_example()
