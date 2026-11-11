@@ -1,5 +1,8 @@
 # LDAI_CodeStyleAgentSkill
 
+> **自用项目** · 本仓库主要供维护者自用。
+
+
 **`ld-codestyle-online` —— LD 人类与 Agent 协作编程技能的 GitHub 持续更新版。**
 
 LD = **LastDream · 最后的梦**。官网：[lastdream.net](https://lastdream.net)；B站：**最后的梦制作组**。
