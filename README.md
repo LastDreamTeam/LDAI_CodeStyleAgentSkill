@@ -1,21 +1,255 @@
-# LDAI_CodeStyleAgentSkill
+# LDAI CodeStyle Agent Skill
 
-> **自用项目** · 本仓库主要供维护者自用。
+**给日常编程 Agent 一套可持续执行的协作约定，让需求、实现与交接都有据可查。**
+
+技能名：`ld-codestyle-online` · 当前版本：**0.5.1** · 形式：**规范 + 模板 + Python 辅助工具**
+
+[看使用前后](#使用前后会有什么不同) · [安装](#安装) · [日常用法](#日常怎么用) · [适用范围](#当前阶段与适用范围) · [详细手册](#详细手册)
+
+它适合把较多实现工作交给 AI、同时希望保留理解和接管入口的开发者。人类表达目标、体验与边界，Agent 按约定完成实现、验证、记录和交接；已有项目的接口、人工改动与资源关系继续受到保护。
 
 
-**`ld-codestyle-online` —— LD 人类与 Agent 协作编程技能的 GitHub 持续更新版。**
 
-LD = **LastDream · 最后的梦**。官网：[lastdream.net](https://lastdream.net)；B站：**最后的梦制作组**。
+> 规范由 Agent 阅读并执行，脚本提供指定辅助能力。下方用当前 0.5.1 的合成代码演示实际约束：图片是源码对照，不是业务工程截图或自动修复证明。图片通过公开代码的在线渲染链接展示，仓库内仍只改这一份 README；原代码可在各图下展开复制。
 
-## 为什么做这个技能
+## 使用前后会有什么不同
 
-我们希望探索一种更适合未来人类与 **Agent / SuperAI** 配合开发的方式：人类仍然可以通过熟悉的 **Markdown、自然语言、接口与必要的代码**，具体地表达自己的欲望、创意、设计与边界；Agent 则承担更多细节实现、验证和日常维护。
+### 1. 同一个需求，从“改完了”变成“能检查、能接手”
 
-这不是让人类彻底无视代码，也不是把设计权交给黑箱。人类把重心更多放在“想要什么、为何需要、最终体验应该怎样”，同时保留理解、查看、调整和约束实现的入口。我们希望成果既能运行，也能被人读懂、接管和继续演进。
+以“给已有的倒计时模块增加暂停能力”为例：
 
-本技能将这种分工落实为可执行的工程约定：小而清楚的控制接口、可替换实现、就近的 Markdown 模块说明、可追溯注释归属，以及按仓库可见性区分的提交记录（私有保留强制准确身份，公开默认只保留 Bot 昵称或 Agent 模型名；两者保留问题和解决方式）。**这些约定服务于协作，不以制造更多抽象层、文档或审批为目的。**
+| 观察点 | 缺少共同约定时的可能情况 | 按技能执行后的交付目标 |
+|---|---|---|
+| 开工 | 仅凭当前聊天开始改代码，遗漏旧限制 | 先读所属 README、相关记忆、真实入口及依赖 |
+| 实现 | 新增另一套状态或顺手修改公共接口 | 复用当前实现；守住契约、序列化和生命周期边界 |
+| 说明 | 只知道代码做了什么，看不出原因 | 改动函数有头部文档，核心顺序旁解释原因与约束 |
+| 验证 | 用“编译通过”代替功能完成 | 核暂停、恢复、重复调用等相关用户流程，列出未验项 |
+| 交接 | 关键要求仍留在某次聊天里 | 在所属区域记录有来源的要求、有效经验与回归方法 |
+
+这些是协作约束带来的**可检查差别**，实际改善取决于 Agent 是否执行、项目是否适配以及验证是否充分。用户只授权局部修复时，不把它扩成整个旧模块的重构。
+
+### 2. 代码对照：同一段算法，能不能放心接手修改
+
+这个例子取自技能的[强制注释规范](skills/ld-codestyle-online/references/comments.md#c-最小示例)：将音频播放秒数映射为谱面毫秒，并补偿输出延迟。**两边的计算相同**；改变的是下一个维护者能否从代码旁看到单位、延迟方向和负值的用途。
+
+![C# 源码前后对照：左侧仅有计算，右侧保留同一计算并补充函数契约、参数单位、延迟方向和预滚负值说明](https://kroki.io/vega/svg/eNqtV21P21YU_ivW2T7sxSV24iS2x5C6qZUmrarUVtqHlQ838U3i1bEj22EwZAla1lEWOsbIyksZpWUDdeJlGuooUJD6Vxrb4VP_wnTtJLWNk0HXj7nX93mec55zzr0ZhfeNfAmXEYhQMs2KISYSQ7iI-oqyWarm-mQt4e97q4mhdN83hqYCDd_KklkCkeV4hoYSloslE8S0wNNQQZIkq0UQGRpyKH-rqGtVVQIR3mNyLMPyQIOETATi16OgojIGEfKahIGGIaRUseFtmHjYBBEqujyETEwZJjLlPCVp1ZyCqRva5yWkm1dkRZENnNdUyfgAaBgGMc3RMEJUZWjIa4qmE1qJywmFAtCgVss5TJZY8mMYxBRv0R2uFnhFQSNE9nUfmG6TalWzUjW_RCZW8yNXjA99QkHoy_iU2XSAEmewVEgFKZNxlKMh1UmG6wmRioPQsVnV1ahq6iOKZRimj6EuRIV_EhGeTKV6snJxrFZYeCbZEyIdB5FIJKh-o1ouI31kwIfL8nH28WyO53Nx9mUzUcCrFaxe_EKk7J27zuymM3fkrs869R1n_pG9M9HY22_u_HWy_NjZ_tNdn319WIvQhiw8TZvsSuvce3KysNY8-sX-Yd8-eNY8Xnl9WGscL7v1hZPHE87BYnN3xR47fDV2O8wYdvw0Y6orY38iPnVhN08jct0RK0hHZYp05Kc3IVJPN2EgmM9XY7f7E973UfpQJZymT5-RPlKzN2EgmFzfv-4iBLaniEx3EX43GQPN1d_t8WN75r67OBGpGfun7eadF6SWdlc8Ce0zYRGpJNNTRDZWxHnnXYeNE3oOPD6W7a0mHp9sT45Ulu_Z9kIs6WhYOcdke4KwTBe33vT695PuwUpjb8yerjdeTBOL7k77HdnuxaWodC71HxOm24ih_E525zYa-_f93iatvjdtP9xwNtfstQln8qkzOXOy9KzT7QHaTO8Jw8aPmLed8QFioffVwsZPGivsVTrZ-6pgg9NlkOC07vcKUrFihG_4YRBZngYF5bACInx26fLVa5eol_9QjRfH7tyGfW8agmQ84vk8EEyCzwVOXrx849I1ctCp3WuuTzRrdxr7a42D-eBxHkvpHAPWoDVIQxnpt1qvjJEKkedFSwNWvXeIOApYNUlAHteoL5rMNsvLQmeBXGetTHXWgGGpBOXsz7iPxpvbu878_deHi87UlHuw60ytNY6Wnektt75gP9xoHDxxH407D8bBoqGgqeZ1-TscpMu21r9qPa46O1mGaW0FiQ2kGhcMrMsFD1BWlOBu2y3Lsjx__1fgWTYmcHum1tgbc7ceOH_XiRt-N1IJqjWzf31uz_xMJajWhXj03K3XPNfqC_bmH87GqvMjuTVPln9r7C3aU6snq8_dpa3m8UxzteZMPrWXjrokiuXPnw1BQignRLKh4zzJRkHXyuRj_5Harl2re5oKMlbI-3YYInkSiIWth3IgeZz15sXcWeayfJxQNsnmkjwBNkxdu4VDmymGY9MZspnXdBXr15AkV41gaphYv88doSEXVUR6TUJmtdw3_HEyGY2V9aqkXRTtlPg92sU34V0UeJvJb_WzhOuFeAY71Td-tpdGICbG1vizaECKXFSDknUvMIv8DzKwIqsh-0yt0i0z2Zjwy5qqGRWUx7EFneYzQrbwTuM_Y_je7_OHKJw1xNMGD1r_AiMlHEQ)
+
+读图重点：函数头部说明用途、参数与返回值；实现旁说明为什么扣除延迟、为什么保留负数。技能要求的是解释真实逻辑，不能只写“处理数据”，也不能为了加说明顺手改算法。`OpenAI:` 在这里演示提供方归属，实际代码使用实际提供方，不冒写人类标记。
+
+演示核对：两个版本都已在独立的纯 C# 夹具中编译运行。`0.01 秒 / 120 毫秒延迟` 均返回 `-110 毫秒`，`0.25 秒 / 120 毫秒延迟` 均返回 `130 毫秒`；补说明没有改变计算结果。
+
+<details>
+<summary><strong>复制图中的完整 C# 对照代码</strong></summary>
+
+使用前：
+
+```csharp
+private static double ToChartMilliseconds(
+    double playbackSeconds, double outputLatencyMs)
+{
+    return playbackSeconds * 1000.0 - outputLatencyMs;
+}
+```
+
+按规范交付：
+
+```csharp
+/// <summary>
+/// OpenAI: 将播放秒数映射为谱面毫秒，
+/// 扣除输出延迟，保留预滚负值。
+/// </summary>
+/// <param name="playbackSeconds">播放秒数。</param>
+/// <param name="outputLatencyMs">输出延迟毫秒。</param>
+/// <returns>补偿后的谱面毫秒，可能为负。</returns>
+private static double ToChartMilliseconds(
+    double playbackSeconds, double outputLatencyMs)
+{
+    // OpenAI: 先统一单位，再扣除延迟；
+    // 负值用于预滚，不在此处截成零。
+    return playbackSeconds * 1000.0 - outputLatencyMs;
+}
+```
+
+</details>
+
+### 3. 生命周期对照：避免重复启用后回调越积越多
+
+以下展示一个常见的生命周期审查点：普通 C# 事件在 `OnEnable` 中订阅后，应在对应的 `OnDisable` 中解除。**前提是当前模型在启用期间不被替换，且模型引用已正确装配。**
+
+![C# 生命周期前后对照：使用前只有 OnEnable 订阅，采用后补齐有文档与原因说明的 OnEnable 和 OnDisable，成对订阅及解除自身回调](https://kroki.io/vega/svg/eNqtV11P21YY_ivW6S421U1sx4k_1k3qOirtYkJi03Yxoek4Pkk8HDuyHRoWWYICYgwCRW3Hx_hQV1QitgEXFWsJCGl_pXY-rvgL07GT1CZOGrRe5j3287zv8z6v35My-MhM51AeAhHkLKtgivH4JMrCWFaxckUppuhx_9yLxieTsZ9MXQMkeKjIVg6INMtTJMghJZuzgJhMCSQoQFlWtCwQKRJIMD2RNfSiJgMR3KIkmqJ5QAIZWhCIP5SBBvMIiCCtywiQYBKqRWR6BxYqWUAEBUOZhBYiJnVFJka1EQ1KKvr4E0CCEhCTLAmmcAopEqR1VTcwh8xKQiYDSKAV8xLCIRr_KAExwdtkF7gchuCSAQiUQnImEYRgoiDyP36ty0iN3c9BLYtk4vZnxBjKGMjMfaegh5_6BIIQS3kUDMUOpEhEUdihLJlEYiAEGwURRkgxAxGSUQjxONE4P3NP1pzXK82jP1ob8635inv8prE11zx40drcrz-pOBfbb6cfhbkEOsDF0xLPS0GuVB-u1kLF3a-4j48bT6vu6nFz9sKP-NTXWRIMNZCFi2aJE3fNYj4PjanPRwtIu_eVSPiM9fVTn8i9eOIuVurV5-7u0tvpR3fjned9eo6PMl8vf8d8XCqYwEBbd6FDpuz1NRMJXQ6DDGu7MEg8TnRk8dVoHK67qy-c1yuN2pxTO_W16gSnmwuvun3hma7jQ3btlYaNpB5qqgIkQzo6TGJfEylk1V6QVCRIGCNsxF4Mro_QEU5svJxpO9Efr-2_fNXxwHWGoJ8fE6wwUHR-GD9-qZhRhkxw_EBDCsMYkqW4gTrR1Psc6a4eNg5qrc395sJh8-xP9_fd5sns1fmyc7nTeLbpzp86td98nZrT8xG-ZBPvGVl6KGPeGWxMNjV4pdDMMM5khcHjSwfndxzjtDdqAWpINcM7tQREmieBCiWkAhF8MfJgdGyE-Pcfwrm4xB_bxQoIkvGQ59MAY2J8NvDmvQffjozhF-vLi82DuebyrHO279Q2gq_zSE5KFLDH7XES5KEx0d7rUwWcnlctCZDmbX6xDJBm4YI8rrKfNB5u21OhG8Bf8bZS3RigGCJONJ7uuWsX7lq1vr13db7l9x8vLH-EfnnsHr9xF84aKyfAJkFG16xvlJ9RkItrx79v32W6JxxFtY-CrCbUzDsmMpSMB6ioavC00yrbtr3m_q-qOTqi6vrmUWt6i7h_i3DOlpzaKW5HcGe529X2Rtvea62_ci536sszzuuKu7rhde7Zpvv3y3r1eX1p7-p8ubWz21w4dH-tOpdHeNcez9Q3VvooRfM3l0OQIZSEa3IYKI3lyBh6Hj_sXwo7zrX765RRkIrvkyVwTSgB97B9MQ2ox9rvbqjdMMsKUYnSDC0xPAY2LUOfQKHDBMXSyRQ-TOuGhowxKCtFMygNFdnwG1doKlkN4kmToVXMx0q3GeZ6rbRnk44rOpL4E9qnb8KHcHiHyR_0Ycr1Shyindq7fnZCUyCixvbHzyYBVJWsFkzZ8Aqz8f8OE6mKFmqfpRf6KcNFlJ_XNd0swDSKNHSSTwlc5oPWP2T53u-blygMW2Jvg8ft_wB2ktuw)
+
+对应的关键修改可以直接看 diff：
+
+```diff
++ /// <summary>OpenAI: 启用时订阅当前模型。</summary>
+  private void OnEnable()
+  {
++     // OpenAI: 订阅窗口与组件启用窗口一致。
+      m_Model.Changed += RefreshView;
+  }
+
++ /// <summary>OpenAI: 禁用时解除本组件的订阅。</summary>
++ private void OnDisable()
++ {
++     // OpenAI: 只移除自身回调，保留其他订阅者。
++     m_Model.Changed -= RefreshView;
++ }
+```
+
+这是一项需要 Agent 核对并验证的具体改动，不是技能自带的自动扫描/修复器。若模型会在启用期间更换、订阅来自其他对象或需跨禁用期保留，就必须先核真实所有权与业务要求，再选择正确的解除位置，不能机械照抄。
+
+演示实测：在独立的纯 C# 夹具中执行三轮启停，再启用并发布一次事件，使用前触发 **4 次**回调，配对解除后触发 **1 次**；再次禁用后发布事件，后者不再新增回调。本页两个示例合计 **7 个断言通过**。这验证了片段的计算与普通 C# 事件行为，未声称实际 Unity 场景、装配或业务工程已验收。
+
+<details>
+<summary>复制图中的完整生命周期片段</summary>
+
+使用前：
+
+```csharp
+private void OnEnable()
+{
+    m_Model.Changed += RefreshView;
+}
+
+// 缺少与订阅配对的解除操作。
+// 重复启用可能重复订阅。
+```
+
+按规范交付：
+
+```csharp
+/// <summary>OpenAI: 启用时订阅当前模型。</summary>
+private void OnEnable()
+{
+    // OpenAI: 订阅窗口与组件启用窗口一致。
+    m_Model.Changed += RefreshView;
+}
+
+/// <summary>OpenAI: 禁用时解除本组件的订阅。</summary>
+private void OnDisable()
+{
+    // OpenAI: 只移除自身回调，保留其他订阅者。
+    m_Model.Changed -= RefreshView;
+}
+```
+
+这两个片段省略外围类型和 `RefreshView` 实现，用于比较同一事件订阅场景；不作为可直接挂载的完整 Unity 组件。
+
+</details>
+
+### 4. 换会话、换 Agent：从聊天里找，变成从模块入口找
+
+```mermaid
+flowchart TB
+    subgraph Before["使用前 · 知识散落在会话"]
+        direction LR
+        B1["用户要求"] --> B2["旧聊天与临时笔记"]
+        B2 -. "接手者未必能找到" .-> B3["重复询问<br/>或再次踩坑"]
+    end
+    subgraph After["采用后 · 模块共享记忆"]
+        direction LR
+        A1["模块 README<br/>职责、边界与入口"]
+        A1 --> U["USER.md<br/>用户要求与来源"]
+        A1 --> M["MEMORY.md<br/>事实与有效经验"]
+        A1 --> D["DEBUG.md<br/>操作与回归流程"]
+        U --> N["下一位 Agent<br/>按需读取、回核版本"]
+        M --> N
+        D --> N
+    end
+    Before ~~~ After
+    classDef old fill:#fff3ed,stroke:#b78062,color:#55321f;
+    classDef index fill:#edf3ff,stroke:#5978ad,color:#173253;
+    classDef memory fill:#eaf7f0,stroke:#4b886b,color:#153e2b;
+    class B1,B2,B3 old;
+    class A1 index;
+    class U,M,D,N memory;
+```
+
+这里的“记住”依赖项目文件和 Agent 主动读取，不等于宿主自动注入，也不是导出 Bot 的私人记忆。文件放在 `Agentic/`，逻辑范围仍由所属 README 声明；每份文件的头部也须能独立说明职责、范围与维护边界。只有已声明采用精选历史的区域，才使用 SQLite 存完整记录。
+
+### 5. 交付对照：从一句“修好了”到可复核的记录
+
+| 缺少约定的交接 | 按技能执行的交接内容 |
+|---|---|
+| `fix bug` / “已修复，测试通过” | 实际执行身份、具体问题、改了哪里、验证到哪、尚未验证什么 |
+| “重复回调已处理” | 说明订阅窗口、解除位置、模型引用是否可更换，以及启停后回调次数的检查结果 |
+| “以后记住这个坑” | 在所属 DEBUG 的同类条目中保留触发条件、有效修复与回归流程 |
+
+提交结构示意如下；占位项必须换成实际信息，不能把示例预期写成已完成的验收：
+
+```text
+##模型：<实际昵称或具体模型名> | 修复组件重复订阅
+
+##问题：
+<实际复现入口、用户可见症状及已确认原因>
+
+##解决：
+<实际改动、有效验证、被测版本和未验边界>
+```
+
+本页代码演示仅覆盖有限场景：真实交付仍要依次核语法、项目编译、最小运行入口和受影响的用户流程，并在推送或合并后对准确版本复核。缺设备、Editor 或权限时明确标未验。公开仓库默认只保留 Bot 昵称或具体模型名，私有仓库按完整身份要求执行；公开前仍须检查隐私及全部待推送历史。
+
+
+## 安装
+
+### 一句话交给你的 Agent
+
+复制这句话给你正在使用的 Agent，普通获取、接入和验证由它完成：
+
+```text
+请阅读以下安装说明，为你当前的 Agent 环境安装 ld-codestyle-online，并验证主动检查更新可用：https://github.com/LastDreamTeam/LDAI_CodeStyleAgentSkill/blob/main/skills/install.md
+```
+
+**[打开 Agent 安装说明](skills/install.md)** · [纯文本入口](https://raw.githubusercontent.com/LastDreamTeam/LDAI_CodeStyleAgentSkill/main/skills/install.md)
+
+仓库已从 `LastDreamTeam/LDCodeStyleAgentSkill` 更名；技能名仍为 `ld-codestyle-online`。新安装使用新地址，旧安装的原地升级与偏好保留见[更名迁移](skills/ld-codestyle-online/references/maintenance.md#仓库更名兼容)。不要求换安装目录，也不另装一个同名技能。
+
+文档要求 Agent 识别当前宿主和作用域，获取官方最新版、安装完整技能、验证宿主发现及主动检查；不会替同一电脑上的其他 Agent 一起安装。Hermes 使用原生管理器；允许本地技能的其他宿主可用独立 Git 克隆＋本地目录/链接接入。只扔一份 `SKILL.md` 不算完整安装，也不会因此获得可用更新后端。
+
+“一句话安装”是交互目标，不是绕过权限或兼容一切的承诺。需要有文件、终端和网络能力，且宿主允许该接入方式；审批/激活等确需人工的步骤由 Agent 明确报告。当前部分 Hermes 版本会以 CAUTION 拦截维护脚本，必须按平台正式审批，不能改走手工安装规避。各款 CLI/桌面端及 Windows/macOS 仍须各自实机验收。
+
+## 日常怎么用
+
+安装后，把它作为当前 Agent 的常备协作约定，继续正常分配开发任务即可。下面是可以直接表达的任务方式，不是新增的斜杠命令：
+
+| 你想做的事 | 可以这样交代 |
+|---|---|
+| 加功能 | “给这个模块加暂停能力。按相关约定先查入口和契约，保留现有场景引用，交付实际验证结果。” |
+| 修复老问题 | “这个问题又出现了，查旧修复和当前版本；修好并验证后，更新所属 DEBUG 的同类条目。” |
+| 换 Agent 接手 | “从这个模块 README 及相关 USER/MEMORY/DEBUG 继续，先核现在的代码和未完成项。” |
+| 整理旧模块 | “单独安排本区域打扫，保留人工内容和资源关系，说明还差哪些。” |
+| 查看技能状态 | “检查当前实例的版本和健康状态，说明是否有更新、哪些验证还没做。” |
+
+**先确认完整安装，再谈自动化。** 单独复制 `SKILL.md` 只能获得一部分文字说明；脚本、引用、模板与版本清单共同组成安装单元。脚本能力与规范职责如下：
+
+| 当前仓库提供的内容 | 实际用途 | 需要你知道的边界 |
+|---|---|---|
+| 技能正文与引用规范 | 指导 Agent 读上下文、实现、注释、验证与交接 | 执行依赖宿主工具和 Agent，不能保证任意模型遵守 |
+| `maintain.py` / `commit_identity.py` | 当前实例配置、版本/健康信息与提交首行 | 不替你执行 Git 提交，也不自行安装后台维护 |
+| `project_memory.py` | 查询共享记忆策略，按主人要求管理本机项目黑名单 | 不会批量创建业务文档；排除也不删除已有资料 |
+| `memory_history.py` | 已声明区域内的精选历史、检索、摘要替换与交换 | 不抓取全量聊天，不自动保证压缩后的语义正确 |
+| `interact.py` 与 HTML 辅助 | 宿主原生能力缺失时，辅助收集必要的回答 | 不执行被选方案，不提供额外批准或跨机器通知 |
 
 ## 当前阶段与适用范围
+
+这是实用的日常协作技能，当前仍在持续实践。**从 0.5.0 起，适用范围按三层区分：**
+
+| 层次 | 默认怎么用 | 不随它自动发生的事 |
+|---|---|---|
+| **提交身份** | 所有仓库均适用；公开/私有分别处理 | 不改全局 Git 身份、旧提交或账号绑定 |
+| **共享 Markdown 记忆** | 所有项目默认启用；明确排除才记本机黑名单 | 不搬私人记忆、不全仓铺模板、不扩大任务范围 |
+| **源码风格与 Unity/OOP 架构** | 按已采用约定、授权和语言/项目适配范围执行 | 不把 Base、Unity 目录或 Inspector 硬套其他技术栈 |
+
+优先注意这几件事：
+
+- **已有项目边界优先。** 人工标记、第三方插件、生成文件、公开 API、序列化资产和生命周期各有保护要求；格式整理只覆盖本次改动。
+- **日常维护和打扫分开。** 相关任务内顺手维护有价值的记录，旧债另排，不因安装技能就全仓重写。
+- **不以沉默替代批准。** 能在既有授权内安全决定的继续推进；确需裁决的项给出可行方案，独立工作照常进行。
+- **更新跟着使用发生。** 新安装默认自动更新，每滚动 24 小时最多检查一次；已有关闭选择保留，当前任务不静默切换规则。
+- **验证边界如实交代。** 规范适用范围不等于所有引擎、宿主和系统均已实机验证；不能用编译通过替代真实功能验收。
+
+<details>
+<summary>展开原有完整适用规则</summary>
 
 目前仍处于**持续迭代、研究与工程实践阶段**。规则的默认适用范围与实机验证范围分别说明，不将“已规定适用”当成“所有引擎均已验证”。本技能约束开发规范、习惯与风格，不能替代测试、审查和必要的人类判断。
 
@@ -27,6 +261,15 @@ LD = **LastDream · 最后的梦**。官网：[lastdream.net](https://lastdream.
 - 第三方插件、生成文件、序列化资产和现有公共契约有独立边界。技能不是改写它们的授权，也不能覆盖当前任务范围。插件优先项目侧扩展；确有必要的侵入改写须最小化、就地标记，并在插件目录外的必读入口登记清单，升级后按清单补回，见[插件纯净与必要改写](skills/ld-codestyle-online/references/contract.md#插件纯净与必要改写)。
 - 本次新写和改动的代码按工程格式配置与周边风格整理，保持原编码与换行，不全文件重排未改动代码；整体格式化单独提交，见[代码格式整理](skills/ld-codestyle-online/references/contract.md#代码格式整理)。
 - 原 `ld-codestyle-v6` 是首版的规范来源；在线版拥有自己的版本号。**同一任务只使用一份确定版本，不叠加旧版与在线版。**
+
+</details>
+
+## 详细手册
+
+下面保留原有命令、参数、边界与历史出处，按主题展开即可。所有命令仍从**完整技能目录**执行；含占位路径、修改开关或写入动作的命令，只在对应需求和授权成立时使用。
+
+<details>
+<summary><strong>项目记忆：跨引擎路径映射与本机黑名单</strong></summary>
 
 ## 跨项目共享Markdown记忆与项目黑名单
 
@@ -57,6 +300,57 @@ python -B scripts/project_memory.py include --project-root "<真实项目根绝�
 
 Windows读取当前用户持久环境值优先，避免运行中宿主继承旧环境导致恢复失效；其他系统由Agent沿已核实的宿主环境设置入口保存返回值，重新查询验证后才报告已生效。不自动改shell启动文件或全机设置，不把本机项目路径提交到仓库；仅运行建议命令不会修改父进程环境。
 
+</details>
+
+<details>
+<summary><strong>共享文档：README、USER、MEMORY、DEBUG 各放什么</strong></summary>
+
+## 目录级共享记忆
+
+在一方模块的 Base 与配对接口所在控制区域，以 **README 声明范围、Agentic 存放记忆**。这样接手者能找到本区域的需求、经验和实际使用/测试方式，避免跨目录知识污染与重复解释：
+
+```text
+<区域根>/
+  README.md                 区域声明、边界、入口索引
+  Agentic/
+    MEMORY.md               共有事实与经验
+    USER.md                 用户意图与要求
+    DEBUG.md                用户操作与正确测试流程
+```
+
+- **`README.md`** 留在原区域根，维持原本业务说明、职责与权威索引，不因记忆搬迁被替代或清空；新增MEMORY/USER/DEBUG等记忆索引。头部必须简述机制、同级逻辑scope及不可擅删/他用，让未安装本技能的Agent也能在本文件内读懂，而不是只给技能链接。
+- **`Agentic/MEMORY.md`**：模块逻辑、业务意图、已验证修复经验和坑点的可核参考；区分观察与推论，不是某个Agent的私有记忆。工作会话发现或用户反馈复发缺陷、尤其Git曾修过时，应核历史并在有效修复验证后更新正确关联层级的同类条目，说明发现、修复过程、证据和防复发边界；缺陷正文已在DEBUG时不另复制，MEMORY仅提炼独立机制经验。阶段性/番茄切片成功修复也可记录并注明剩余未完成范围；半途猜测、无价值废弃/放弃方案留原任务，不灌进共享记忆。见[修复经验闭环](skills/ld-codestyle-online/references/directory-context.md#复发缺陷的修复经验闭环)。
+- **`Agentic/USER.md`**：本区域持久要求、动态业务需求、用户痛点及单列的未来设想；准确保留用户原意，不把一次性任务升格为永久要求。
+- **`Agentic/DEBUG.md`**：保存缺陷与防复发记录，并从会话与开发中的用户描述/纠正持续维护正确操作和测试流程，包含关联文件/数据、触发条件、有效修复要点、前提、步骤、预期、实际结果、版本/环境、恢复与未验范围。缺陷可在此维护完整唯一正文，独立机制经验再提炼到 MEMORY 并互链，不强迫抄两份。
+- **每份文件独立可读**：不能只在 README 写一次。README/MEMORY/USER/DEBUG及同类文件各自在头部留简短、自足的用途与维护提示，说明持久共享属性、真实作用域/README入口、可做与不可擅做的事。即使直接打开单个文件、没安装技能或不在舰队/指挥系统，也不应误当临时文件、宿主私有记忆或任意日志；头部不充当System Prompt或新增授权。旧共享文件的缺口归打扫时补齐，保留有效正文和来源，不能只改新模板。详见[独立文件头部要求](skills/ld-codestyle-online/references/directory-context.md#每份文件头部独立可读的基础说明)。
+- **物理存放不改变逻辑范围**：记忆跟随所属 README 的逻辑层级与声明范围，不只管 Agentic、不扩大权限。上图是常见布局；README 也可以与所说明的模块目录同级、索引该模块 Agentic 内的记忆，双方须写准确的入口/返回路径及排除项，不能机械回填 `../README.md`。
+- **平时顺手放好**：所有 Markdown 记忆都放在它所属目录的 README/Agentic，别随手堆项目根目录或别人模块；平时，一条坑记在出事那块目录自己的 README/Agentic 里。**致命级例外优先**：死机、崩溃、掉数据、工程/存档损坏，要往外挪到「凡是动这块东西的人都得先看」的那一份文件（含它的索引）；XR 就是 XR 那套文件里最外面的那一份，不是项目根，也不是只留在出事那个子目录。条目标注「死机级」，带触发条件和一手证据（版本/提交）。README 是本区域唯一索引，没有新信息就不记。
+- **按需读取但不漏读**：从共同入口和上层适用约定到目标模块，再沿直接依赖补查，不全仓注入。验收时只修改任一关联方，都应能从正常入口发现对应约束；无关模块不应被迫读全文。非致命级示例中 ViewModel/Mgr 联动记在 `./Agentic/DEBUG.md`，FunA 内 ViewModel/Prefab 联动记在 `./Core/FunA/Agentic/DEBUG.md`；若是致命级，后者移到维护 FunA 人人必读的外层入口并标「死机级」，不是固定放项目根，见[完整路径示例与规则](skills/ld-codestyle-online/references/directory-context.md#记在哪里)。
+- **README 真正替代旧 Agentic.md 模块索引**：在授权区域保全有效正文、来源、相对链接和 Unity meta 后收敛，只保留一套有效入口/正文；短期兼容只能指路并列退役条件。仅新增 README、旧文件仍双写，不算迁移完成；`Agentic/` 目录及宿主 `AGENTS.md` 不在替代范围。见[迁移步骤与完成条件](skills/ld-codestyle-online/references/agentic.md)。
+- 整理权限：普通Agent在九成以上把握时做无损整合；已采用精选历史流程的三份有限摘要，可由授权区域维护者先归档读验、保全旧修订再内容压缩。README/人类资料及未采用区域仍由专门获授权的审计/辅助模型处理，不扩权或丢失关键原意。
+
+本组记录均以**参考为主而非绝对**。首次新增的解释、经验与意图摘要默认暂定，依证据自然使用“可能”“预计”“估计”“当前理解”等措辞；已发生的实测结果和真实路径仍准确陈述。`USER.md` 尽可能保留整理后的用户原话意图、条件和例外，区别摘录与摘要，不改写原话来制造不确定性。
+
+条目经相关推送后超过 **7天**并复核，可进入持续观察；超过 **15天（半个月）**，经过**多次相关推送**和不同时间的验证且无未解决反例，才可在**再次涉及**时考虑修正为限定范围的基本稳定知识。默认将多次解释为至少3次独立相关推送（含首次），明确的项目/用户口径优先。时间与次数不自动证明正确，也不授权为了凑数推送或定时改记忆；证据不足保持暂定，反例和实质变化须降级回核。当前明确用户指令不等待观察期，不被历史摘要覆盖。完整证据口径与示例见[共享上下文成熟度](skills/ld-codestyle-online/references/directory-context.md#参考措辞与知识成熟度)。
+
+**推送后、PR/分支合并后**，对准确的目标版本按 DEBUG 的相关用户流程实际尝试；不能只读流程或用编译、接口成功替代业务验证。未合并、未部署、缺设备/权限等明确记未验及下一责任，不自动授权部署或危险操作。失败保留证据，不降低预期来洗绿；完整规则见[DEBUG回归](skills/ld-codestyle-online/references/directory-context.md#推送后与合并后的回归)。
+
+**所有记忆类文件尽量带日期**，新增、修改、删除条目都在文内简记真实日期、条目标识、动作/原因和操作身份（私有按Bot/Agent身份要求；公开默认昵称或模型名、不含推理强度，主人可调整）；删除仍留简短摘要或替代索引。文件更新时间、用户提出日期、推送日期、实际验证日期分开，未知历史不补造。
+
+**打扫另做，不是每次任务都做**：找出没按要求放的旧东西，保留有效内容、来源、链接和meta，搬回所属 README/Agentic；旧 Agentic.md 的有价值正文由 README 承接。搬时留一行“从哪搬到哪、谁搬的”（公开目标按隐私规则记录）；旧代码缺注释、旧脚本没按新规也归这次打扫。可以分几次，做不完记一句“还差哪些”，下次接着清。历史人类 Readme、人工改动与宿主私有记忆不擅动，不复制两份正文；见[完整规则与模板](skills/ld-codestyle-online/references/directory-context.md)。
+
+安装/更新技能不自动开扫；只读不搬。平时读取相关 README 及仍有效的旧入口，不因尚未打扫就忽略已有要求，也不把打扫摊到每次开发。
+
+本节原提案记录：2026-10-15（Asia/Shanghai）；按 [Issue #2](https://github.com/LastDreamTeam/LDAI_CodeStyleAgentSkill/issues/2) 新增作用域/布局、DEBUG与日期身份约定，并据用户补充明确既有文件必须迁移、README原职责保留及每份文件独立可读的头部说明，不仅README；继承 #1 的成熟度规则，随0.3.0统一发布。
+`##模型：列克星敦 + openai/gpt-6-astra | 补充目录共享记忆与用户流程回归`
+
+2026-10-16统一审查补充：在已授权写维护触及的责任区域主动迁移旧记忆，并同时检查README入口和脚本附近旧位置。Codex + GPT-6；原提案与审查归属保留。
+
+</details>
+
+<details>
+<summary><strong>精选历史：SQLite、有限摘要、检索与交换命令</strong></summary>
+
 ## 区域历史与有限记忆
 
 三份Markdown只承载当前关键摘要；`Agentic/history.sqlite3`精选保留本责任区用户原话、已验证bug修复和踩坑经验的完整记录。按需查历史，不全库注入、不无限分卷。USER/MEMORY/DEBUG默认上限分别为 **4000/6000/6000 Unicode字符**（含头部/索引），是可调整的实现默认值，不是token或用户指定值；80%提示整理。先归档读验、保全旧修订再压缩，范围与隐私边界见[完整规范](skills/ld-codestyle-online/references/memory-history.md)。
@@ -86,6 +380,11 @@ python -B scripts/memory_history.py --area "<实际区域>/Agentic" import --inp
 
 日期/类型为独立SQL列并带索引；未知日期保留原值并投影为NULL。新库schema 2，旧库不自动原地改写，schema 1交换包可保全原文导入新库；准确格式、日期边界和迁移步骤见[日期与类型](skills/ld-codestyle-online/references/memory-history.md#日期与类型独立sql列和筛选)。
 
+</details>
+
+<details>
+<summary><strong>源码说明：改动函数的头部与原理注释</strong></summary>
+
 ## 强制源码注释：平时写好，旧账另做打扫
 
 - 平时，新写和改动的函数必须带有效头部文档，包括 private、构造函数、生命周期、测试和内部辅助；C# 等支持 XML 的位置用 XML，其他语言用有效原生文档。
@@ -95,23 +394,71 @@ python -B scripts/memory_history.py --area "<实际区域>/Agentic" import --inp
 
 完整定义、语言差异、旧项目范围与验收见[强制注释与专门打扫](skills/ld-codestyle-online/references/comments.md)。
 
-## 安装
+</details>
 
-### 一句话交给你的 Agent
+<details>
+<summary><strong>提交身份：公开、私有与人类混合贡献</strong></summary>
 
-复制这句话给你正在使用的 Agent，普通获取、接入和验证由它完成：
+### 所有 AI 提交的准确身份
 
-```text
-请阅读以下安装说明，为你当前的 Agent 环境安装 ld-codestyle-online，并验证主动检查更新可用：https://github.com/LastDreamTeam/LDAI_CodeStyleAgentSkill/blob/main/skills/install.md
-```
+commit 前核实际目标，push 前复核托管平台可见性，包括fork/PR与全部推送目标；`internal`不是public，未知不能猜。身份部分在明确可辨时尽量简短，**不用 `+` 连接框架与昵称/模型**。以下规则同时适用于提交消息及新原创提交的 Git author/committer 显示名：
 
-**[打开 Agent 安装说明](skills/install.md)** · [纯文本入口](https://raw.githubusercontent.com/LastDreamTeam/LDAI_CodeStyleAgentSkill/main/skills/install.md)
+| 执行者 | 私有仓库（强制） | public仓库（默认，可按主人要求调整） |
+|---|---|---|
+| Bot：已有独立姓名、记忆与资料的实例 | 框架/容器名-昵称；不需要模型 | 昵称 |
+| Agent：Codex、Claude Code、Cursor、DSH、Copilot等普通会话工具 | 框架/容器名 完整具体模型 实际推理强度 | 具体模型名，不含推理强度 |
 
-仓库已从 `LastDreamTeam/LDCodeStyleAgentSkill` 更名；技能名仍为 `ld-codestyle-online`。新安装使用新地址，旧安装的原地升级与偏好保留见[更名迁移](skills/ld-codestyle-online/references/maintenance.md#仓库更名兼容)。不要求换安装目录，也不另装一个同名技能。
+Grok Bot、GPT Dot、Hermes Bot、DSH Bot是框架/容器示例，不证明任一会话已有独立人格。不能临时起昵称冒充Bot；Agent不能只写`GPT`、`Sol`、`auto`等泛称。模型和档位从本次有效配置/回执核实；没有推理控制时据实声明`none`，不知道不等于没有。旧Codex品牌别名可映射短名，准确模型ID不随意截断。PC改为有明确需要时显式补充，默认不查询主机名。
 
-文档要求 Agent 识别当前宿主和作用域，获取官方最新版、安装完整技能、验证宿主发现及主动检查；不会替同一电脑上的其他 Agent 一起安装。Hermes 使用原生管理器；允许本地技能的其他宿主可用独立 Git 克隆＋本地目录/链接接入。只扔一份 `SKILL.md` 不算完整安装，也不会因此获得可用更新后端。
+公开默认首行 `##模型：<昵称或具体模型名> | <摘要>`；主人可改公开显示名或明确要求省略整个身份段。新生成器 public 调用需要昵称/模型，显式省略选项只用于已获得此要求的情形。私有仍强制完整分类身份，不能用公开覆盖选项绕过。问题和解决两节保留空行，工具入口及例子见[提交规范](skills/ld-codestyle-online/references/commit.md)。
 
-“一句话安装”是交互目标，不是绕过权限或兼容一切的承诺。需要有文件、终端和网络能力，且宿主允许该接入方式；审批/激活等确需人工的步骤由 Agent 明确报告。当前部分 Hermes 版本会以 CAUTION 拦截维护脚本，必须按平台正式审批，不能改走手工安装规避。各款 CLI/桌面端及 Windows/macOS 仍须各自实机验收。
+自有且获准使用的真实邮箱优先用于提交，例如Bot已配有的邮箱；没有则用获准仓库邮箱或平台noreply，**不照抄示例地址、不虚构邮箱、不把认证账户误当实际作者**。只设置当前进程或获准仓库局部字段，核`git var`有效值并回读实际commit，代提交保留原作者，不改全局配置、账号绑定或历史。生成器本身不执行Git。
+
+公开前仍须检查文件、元数据、PR与全部待推送历史中的个人/企业隐私及秘密；简化署名不是秘密扫描。公开默认不附内部框架、推理强度、PC或人类混合显示名，不转填到其他正文。删当前文件或加.gitignore不能清除历史秘密，发现则暂停受影响推送；真实凭据泄漏由有权方撤销/轮换，合法版权/许可来源保留。
+
+### 人类与 AI 混合贡献
+
+核 staged diff 中的 `LD:` / 自定义人类标记及明确关联代码，私有混合首行用 `##主人 + 模型：<已核AI身份> | <摘要>`；`主人`取独立的`human_commit_name`，可改为“褪色的梦”等，不加`【】`。混合前缀的`+`保留贡献语义，不是身份连接符。公开仍默认简化AI署名，正文区分人类既有贡献与本次实现。
+
+历史无关标记不能让所有提交都挂人类名，不能借混合署名扩大保护代码修改权限，也不能把人类旧约定说成本次亲写。标题概括具体结果，问题节交代症状，解决节填写实际改动、验证和未验边界，不能把计划写成成果。
+
+</details>
+
+<details>
+<summary><strong>交付边界：哪些内容推送，遇到难题怎样求助</strong></summary>
+
+## 默认推送范围与最终求助
+
+**默认只同步其他设备或干净检出能够完整复现本次更新所需的内容**，包括真实源码/资源/配置依赖、正式构建和测试脚本、必要文档；默认排除不必要的一次性调试脚本、实验副本、缓存、日志、转储、截图及中间产物。按用途和依赖判断，不按文件名或扩展名一刀切。仅有辅助价值而希望保留的材料，先说明理由并给方案询问；主人已经明确纳入则直接遵守，正常正式依赖无需再批。
+
+Unity自动重新序列化中没有必要业务语义的差异不混入推送；实际场景/预制件/资源变化、导入和项目设置、版本迁移及 `.meta` / GUID 依赖必须完整。排除上传不等于删除本地文件，不擅自清除人工、来源不明或其他任务资料。提交前审查tracked/untracked/staged与diff；推送前审查全部待推送提交、中间版本和元数据，工作树干净不能证明历史干净。用干净检出验证相关正式流程，不以原现场通过冒称跨设备通过。完整示例与检查清单见[默认推送边界](skills/ld-codestyle-online/references/commit.md#默认提交与推送边界完整复现更新)。
+
+**求助是尽力核查后的最后一步**：先查实际依赖、历史与业务要求，评估并在安全授权范围实测；仍不能自主作出安全可靠决定，尤其会较大改变业务行为时，给出已试证据、剩余未知、至少两种可行推荐方案（含取舍、条件、验证/回档和首选理由）以及用户自由说明入口。不能只问“推不推”，也不把“继续/取消”当两种解决办法。
+
+支持异步/后台询问时，在当前宿主发问并继续独立且已授权的工作，待决内容与相关推送暂缓；只有阻塞式能力时如实处理。不支持可用询问功能则暂停当前任务，在同一会话带方案文字询问。超时或无可并行工作时报告待决并暂停相应推进，沉默不等于授权，不无限等候或虚构异步能力。细则见[推送前求助](skills/ld-codestyle-online/references/interaction.md#推送前无法安全决策时的求助)。
+
+</details>
+
+<details>
+<summary><strong>交互续行：工具类 Agent、Bot 与未回答的处理</strong></summary>
+
+## 询问交互与未回答续行
+
+**没回答不是停止整项任务的理由。** 在原授权内评估能否安全自行决定：低风险、可可靠回档、方向清楚则自主推进并留依据；无法回档、业务方向涉及面较多而无法安全裁决或需新增批准的，只暂缓那一项，继续不依赖它的其他任务内容，有可用询问能力时尽量途中带方案发问，收尾汇总仍待裁决项，不为等收尾推迟求助。既不替用户自动选推荐，也不因未答抹掉原授权；明确取消/拒绝/稍后不按沉默处理。
+
+LD语境区分**工具类Agent**（Codex、Cursor、IDE AI插件、DeepSeekHarness等当前终端的工具单元）与**Bot**（具人格配置、私有长期记忆/技能资料、聊天与A2A+Gateway协作、自身可操作环境的AI队友）。这是职责约定，不是行业标准、产品是否支持多OS的判断或权限等级。
+
+- 工具类：当前授权宿主原生询问优先，缺失才用本机HTML辅助或同终端文字；不越平台到其他电脑弹窗，不默认转QQ/微信。
+- Bot：在任务相关聊天渠道用原生卡片/文字询问，不在云服务器或用户其他电脑弹窗。
+- 提供方案/差别、推荐理由、自定义回答与取消/稍后；只问实质待决项，不抢焦点或重复刷问。明确无人值守直接按安全续行规则处理。
+- 等待默认15分钟可调，展示/未答/空闲分开。无人回答时收尾并列已自主决定的依据及回档办法、仍待裁决项；不把未决说成完成。
+
+完整角色定义、语义原文、配置范围、问询示例、本机辅助用法及限制见[交互询问与安全续行](skills/ld-codestyle-online/references/interaction.md)。附带标准库HTML辅助，**不是所有宿主原生弹窗已适配**；不安装后台服务，不自动监控键鼠、不跨终端转发，返回答案也不签发执行批准。发布不会自动更新任何终端；继续使用已有安装的更新策略。
+
+</details>
+
+<details>
+<summary><strong>技能维护：检查、更新、健康状态与数据隔离</strong></summary>
 
 ## 更新与本地配置
 
@@ -138,6 +485,11 @@ python -B scripts/memory_history.py --area "<实际区域>/Agentic" import --inp
 前三种共享根下仍按**技能真实安装路径的标识**分隔，各终端、各克隆、各版本安装副本不会共用一个配置文件。原地升级保留同一实例的偏好；数据格式有独立 schema 版本。环境变量是覆盖入口，不是要求设置的全机公共状态。
 
 更新保留这些偏好，不批量替换源码注释，不更改人格、记忆、凭据或业务项目。原有 `LD:` 和既有人工注释继续保护，原版权来源不得因配置改名而抹去。检查/更新运行方式见[维护说明](skills/ld-codestyle-online/references/maintenance.md)；**可修改参数的操作命令统一只放在下面这一节**。
+
+</details>
+
+<details>
+<summary><strong>参数设置：默认值与唯一修改命令入口</strong></summary>
 
 ## 参数设置
 
@@ -186,92 +538,8 @@ python -B scripts/maintain.py config --idle-after-minutes 15
 
 `show`另显示实际`config_path`与解析后的`interaction`。旧配置没有新对象时沿默认且保留原值；显式修改才写入交互偏好，不重置其他设置。非法类型/越界时拒绝写入。每个安装实例可按终端调整，不改操作系统PATH；原地更新保留偏好。单次问题的等待覆盖不改长期值。
 
-## 默认推送范围与最终求助
+</details>
 
-**默认只同步其他设备或干净检出能够完整复现本次更新所需的内容**，包括真实源码/资源/配置依赖、正式构建和测试脚本、必要文档；默认排除不必要的一次性调试脚本、实验副本、缓存、日志、转储、截图及中间产物。按用途和依赖判断，不按文件名或扩展名一刀切。仅有辅助价值而希望保留的材料，先说明理由并给方案询问；主人已经明确纳入则直接遵守，正常正式依赖无需再批。
-
-Unity自动重新序列化中没有必要业务语义的差异不混入推送；实际场景/预制件/资源变化、导入和项目设置、版本迁移及 `.meta` / GUID 依赖必须完整。排除上传不等于删除本地文件，不擅自清除人工、来源不明或其他任务资料。提交前审查tracked/untracked/staged与diff；推送前审查全部待推送提交、中间版本和元数据，工作树干净不能证明历史干净。用干净检出验证相关正式流程，不以原现场通过冒称跨设备通过。完整示例与检查清单见[默认推送边界](skills/ld-codestyle-online/references/commit.md#默认提交与推送边界完整复现更新)。
-
-**求助是尽力核查后的最后一步**：先查实际依赖、历史与业务要求，评估并在安全授权范围实测；仍不能自主作出安全可靠决定，尤其会较大改变业务行为时，给出已试证据、剩余未知、至少两种可行推荐方案（含取舍、条件、验证/回档和首选理由）以及用户自由说明入口。不能只问“推不推”，也不把“继续/取消”当两种解决办法。
-
-支持异步/后台询问时，在当前宿主发问并继续独立且已授权的工作，待决内容与相关推送暂缓；只有阻塞式能力时如实处理。不支持可用询问功能则暂停当前任务，在同一会话带方案文字询问。超时或无可并行工作时报告待决并暂停相应推进，沉默不等于授权，不无限等候或虚构异步能力。细则见[推送前求助](skills/ld-codestyle-online/references/interaction.md#推送前无法安全决策时的求助)。
-
-## 询问交互与未回答续行
-
-**没回答不是停止整项任务的理由。**在原授权内评估能否安全自行决定：低风险、可可靠回档、方向清楚则自主推进并留依据；无法回档、业务方向涉及面较多而无法安全裁决或需新增批准的，只暂缓那一项，继续不依赖它的其他任务内容，有可用询问能力时尽量途中带方案发问，收尾汇总仍待裁决项，不为等收尾推迟求助。既不替用户自动选推荐，也不因未答抹掉原授权；明确取消/拒绝/稍后不按沉默处理。
-
-LD语境区分**工具类Agent**（Codex、Cursor、IDE AI插件、DeepSeekHarness等当前终端的工具单元）与**Bot**（具人格配置、私有长期记忆/技能资料、聊天与A2A+Gateway协作、自身可操作环境的AI队友）。这是职责约定，不是行业标准、产品是否支持多OS的判断或权限等级。
-
-- 工具类：当前授权宿主原生询问优先，缺失才用本机HTML辅助或同终端文字；不越平台到其他电脑弹窗，不默认转QQ/微信。
-- Bot：在任务相关聊天渠道用原生卡片/文字询问，不在云服务器或用户其他电脑弹窗。
-- 提供方案/差别、推荐理由、自定义回答与取消/稍后；只问实质待决项，不抢焦点或重复刷问。明确无人值守直接按安全续行规则处理。
-- 等待默认15分钟可调，展示/未答/空闲分开。无人回答时收尾并列已自主决定的依据及回档办法、仍待裁决项；不把未决说成完成。
-
-完整角色定义、语义原文、配置范围、问询示例、本机辅助用法及限制见[交互询问与安全续行](skills/ld-codestyle-online/references/interaction.md)。附带标准库HTML辅助，**不是所有宿主原生弹窗已适配**；不安装后台服务，不自动监控键鼠、不跨终端转发，返回答案也不签发执行批准。发布不会自动更新任何终端；继续使用已有安装的更新策略。
-
-### 所有 AI 提交的准确身份
-
-commit 前核实际目标，push 前复核托管平台可见性，包括fork/PR与全部推送目标；`internal`不是public，未知不能猜。身份部分在明确可辨时尽量简短，**不用 `+` 连接框架与昵称/模型**。以下规则同时适用于提交消息及新原创提交的 Git author/committer 显示名：
-
-| 执行者 | 私有仓库（强制） | public仓库（默认，可按主人要求调整） |
-|---|---|---|
-| Bot：已有独立姓名、记忆与资料的实例 | 框架/容器名-昵称；不需要模型 | 昵称 |
-| Agent：Codex、Claude Code、Cursor、DSH、Copilot等普通会话工具 | 框架/容器名 完整具体模型 实际推理强度 | 具体模型名，不含推理强度 |
-
-Grok Bot、GPT Dot、Hermes Bot、DSH Bot是框架/容器示例，不证明任一会话已有独立人格。不能临时起昵称冒充Bot；Agent不能只写`GPT`、`Sol`、`auto`等泛称。模型和档位从本次有效配置/回执核实；没有推理控制时据实声明`none`，不知道不等于没有。旧Codex品牌别名可映射短名，准确模型ID不随意截断。PC改为有明确需要时显式补充，默认不查询主机名。
-
-公开默认首行 `##模型：<昵称或具体模型名> | <摘要>`；主人可改公开显示名或明确要求省略整个身份段。新生成器 public 调用需要昵称/模型，显式省略选项只用于已获得此要求的情形。私有仍强制完整分类身份，不能用公开覆盖选项绕过。问题和解决两节保留空行，工具入口及例子见[提交规范](skills/ld-codestyle-online/references/commit.md)。
-
-自有且获准使用的真实邮箱优先用于提交，例如Bot已配有的邮箱；没有则用获准仓库邮箱或平台noreply，**不照抄示例地址、不虚构邮箱、不把认证账户误当实际作者**。只设置当前进程或获准仓库局部字段，核`git var`有效值并回读实际commit，代提交保留原作者，不改全局配置、账号绑定或历史。生成器本身不执行Git。
-
-公开前仍须检查文件、元数据、PR与全部待推送历史中的个人/企业隐私及秘密；简化署名不是秘密扫描。公开默认不附内部框架、推理强度、PC或人类混合显示名，不转填到其他正文。删当前文件或加.gitignore不能清除历史秘密，发现则暂停受影响推送；真实凭据泄漏由有权方撤销/轮换，合法版权/许可来源保留。
-
-### 人类与 AI 混合贡献
-
-核 staged diff 中的 `LD:` / 自定义人类标记及明确关联代码，私有混合首行用 `##主人 + 模型：<已核AI身份> | <摘要>`；`主人`取独立的`human_commit_name`，可改为“褪色的梦”等，不加`【】`。混合前缀的`+`保留贡献语义，不是身份连接符。公开仍默认简化AI署名，正文区分人类既有贡献与本次实现。
-
-历史无关标记不能让所有提交都挂人类名，不能借混合署名扩大保护代码修改权限，也不能把人类旧约定说成本次亲写。标题概括具体结果，问题节交代症状，解决节填写实际改动、验证和未验边界，不能把计划写成成果。
-
-## 目录级共享记忆
-
-在一方模块的 Base 与配对接口所在控制区域，以 **README 声明范围、Agentic 存放记忆**。这样接手者能找到本区域的需求、经验和实际使用/测试方式，避免跨目录知识污染与重复解释：
-
-```text
-<区域根>/
-  README.md                 区域声明、边界、入口索引
-  Agentic/
-    MEMORY.md               共有事实与经验
-    USER.md                 用户意图与要求
-    DEBUG.md                用户操作与正确测试流程
-```
-
-- **`README.md`** 留在原区域根，维持原本业务说明、职责与权威索引，不因记忆搬迁被替代或清空；新增MEMORY/USER/DEBUG等记忆索引。头部必须简述机制、同级逻辑scope及不可擅删/他用，让未安装本技能的Agent也能在本文件内读懂，而不是只给技能链接。
-- **`Agentic/MEMORY.md`**：模块逻辑、业务意图、已验证修复经验和坑点的可核参考；区分观察与推论，不是某个Agent的私有记忆。工作会话发现或用户反馈复发缺陷、尤其Git曾修过时，应核历史并在有效修复验证后更新正确关联层级的同类条目，说明发现、修复过程、证据和防复发边界；缺陷正文已在DEBUG时不另复制，MEMORY仅提炼独立机制经验。阶段性/番茄切片成功修复也可记录并注明剩余未完成范围；半途猜测、无价值废弃/放弃方案留原任务，不灌进共享记忆。见[修复经验闭环](skills/ld-codestyle-online/references/directory-context.md#复发缺陷的修复经验闭环)。
-- **`Agentic/USER.md`**：本区域持久要求、动态业务需求、用户痛点及单列的未来设想；准确保留用户原意，不把一次性任务升格为永久要求。
-- **`Agentic/DEBUG.md`**：保存缺陷与防复发记录，并从会话与开发中的用户描述/纠正持续维护正确操作和测试流程，包含关联文件/数据、触发条件、有效修复要点、前提、步骤、预期、实际结果、版本/环境、恢复与未验范围。缺陷可在此维护完整唯一正文，独立机制经验再提炼到 MEMORY 并互链，不强迫抄两份。
-- **每份文件独立可读**：不能只在 README 写一次。README/MEMORY/USER/DEBUG及同类文件各自在头部留简短、自足的用途与维护提示，说明持久共享属性、真实作用域/README入口、可做与不可擅做的事。即使直接打开单个文件、没安装技能或不在舰队/指挥系统，也不应误当临时文件、宿主私有记忆或任意日志；头部不充当System Prompt或新增授权。旧共享文件的缺口归打扫时补齐，保留有效正文和来源，不能只改新模板。详见[独立文件头部要求](skills/ld-codestyle-online/references/directory-context.md#每份文件头部独立可读的基础说明)。
-- **物理存放不改变逻辑范围**：记忆跟随所属 README 的逻辑层级与声明范围，不只管 Agentic、不扩大权限。上图是常见布局；README 也可以与所说明的模块目录同级、索引该模块 Agentic 内的记忆，双方须写准确的入口/返回路径及排除项，不能机械回填 `../README.md`。
-- **平时顺手放好**：所有 Markdown 记忆都放在它所属目录的 README/Agentic，别随手堆项目根目录或别人模块；平时，一条坑记在出事那块目录自己的 README/Agentic 里。**致命级例外优先**：死机、崩溃、掉数据、工程/存档损坏，要往外挪到「凡是动这块东西的人都得先看」的那一份文件（含它的索引）；XR 就是 XR 那套文件里最外面的那一份，不是项目根，也不是只留在出事那个子目录。条目标注「死机级」，带触发条件和一手证据（版本/提交）。README 是本区域唯一索引，没有新信息就不记。
-- **按需读取但不漏读**：从共同入口和上层适用约定到目标模块，再沿直接依赖补查，不全仓注入。验收时只修改任一关联方，都应能从正常入口发现对应约束；无关模块不应被迫读全文。非致命级示例中 ViewModel/Mgr 联动记在 `./Agentic/DEBUG.md`，FunA 内 ViewModel/Prefab 联动记在 `./Core/FunA/Agentic/DEBUG.md`；若是致命级，后者移到维护 FunA 人人必读的外层入口并标「死机级」，不是固定放项目根，见[完整路径示例与规则](skills/ld-codestyle-online/references/directory-context.md#记在哪里)。
-- **README 真正替代旧 Agentic.md 模块索引**：在授权区域保全有效正文、来源、相对链接和 Unity meta 后收敛，只保留一套有效入口/正文；短期兼容只能指路并列退役条件。仅新增 README、旧文件仍双写，不算迁移完成；`Agentic/` 目录及宿主 `AGENTS.md` 不在替代范围。见[迁移步骤与完成条件](skills/ld-codestyle-online/references/agentic.md)。
-- 整理权限：普通Agent在九成以上把握时做无损整合；已采用精选历史流程的三份有限摘要，可由授权区域维护者先归档读验、保全旧修订再内容压缩。README/人类资料及未采用区域仍由专门获授权的审计/辅助模型处理，不扩权或丢失关键原意。
-
-本组记录均以**参考为主而非绝对**。首次新增的解释、经验与意图摘要默认暂定，依证据自然使用“可能”“预计”“估计”“当前理解”等措辞；已发生的实测结果和真实路径仍准确陈述。`USER.md` 尽可能保留整理后的用户原话意图、条件和例外，区别摘录与摘要，不改写原话来制造不确定性。
-
-条目经相关推送后超过 **7天**并复核，可进入持续观察；超过 **15天（半个月）**，经过**多次相关推送**和不同时间的验证且无未解决反例，才可在**再次涉及**时考虑修正为限定范围的基本稳定知识。默认将多次解释为至少3次独立相关推送（含首次），明确的项目/用户口径优先。时间与次数不自动证明正确，也不授权为了凑数推送或定时改记忆；证据不足保持暂定，反例和实质变化须降级回核。当前明确用户指令不等待观察期，不被历史摘要覆盖。完整证据口径与示例见[共享上下文成熟度](skills/ld-codestyle-online/references/directory-context.md#参考措辞与知识成熟度)。
-
-**推送后、PR/分支合并后**，对准确的目标版本按 DEBUG 的相关用户流程实际尝试；不能只读流程或用编译、接口成功替代业务验证。未合并、未部署、缺设备/权限等明确记未验及下一责任，不自动授权部署或危险操作。失败保留证据，不降低预期来洗绿；完整规则见[DEBUG回归](skills/ld-codestyle-online/references/directory-context.md#推送后与合并后的回归)。
-
-**所有记忆类文件尽量带日期**，新增、修改、删除条目都在文内简记真实日期、条目标识、动作/原因和操作身份（私有按Bot/Agent身份要求；公开默认昵称或模型名、不含推理强度，主人可调整）；删除仍留简短摘要或替代索引。文件更新时间、用户提出日期、推送日期、实际验证日期分开，未知历史不补造。
-
-**打扫另做，不是每次任务都做**：找出没按要求放的旧东西，保留有效内容、来源、链接和meta，搬回所属 README/Agentic；旧 Agentic.md 的有价值正文由 README 承接。搬时留一行“从哪搬到哪、谁搬的”（公开目标按隐私规则记录）；旧代码缺注释、旧脚本没按新规也归这次打扫。可以分几次，做不完记一句“还差哪些”，下次接着清。历史人类 Readme、人工改动与宿主私有记忆不擅动，不复制两份正文；见[完整规则与模板](skills/ld-codestyle-online/references/directory-context.md)。
-
-安装/更新技能不自动开扫；只读不搬。平时读取相关 README 及仍有效的旧入口，不因尚未打扫就忽略已有要求，也不把打扫摊到每次开发。
-
-本节原提案记录：2026-10-15（Asia/Shanghai）；按 [Issue #2](https://github.com/LastDreamTeam/LDAI_CodeStyleAgentSkill/issues/2) 新增作用域/布局、DEBUG与日期身份约定，并据用户补充明确既有文件必须迁移、README原职责保留及每份文件独立可读的头部说明，不仅README；继承 #1 的成熟度规则，随0.3.0统一发布。
-`##模型：列克星敦 + openai/gpt-6-astra | 补充目录共享记忆与用户流程回归`
-
-2026-10-16统一审查补充：在已授权写维护触及的责任区域主动迁移旧记忆，并同时检查README入口和脚本附近旧位置。Codex + GPT-6；原提案与审查归属保留。
 
 ## 本仓库的共享上下文入口
 
@@ -299,6 +567,20 @@ Release ZIP用于允许文件包安装的宿主，不绕过原生管理器审批
 - Python 工具、测试和实际代码文件：**AGPL-3.0-only**。
 - 具体分区、标准全文和第三方声明见 [LICENSE](LICENSE) 与 [NOTICE.md](NOTICE.md)。这是分区授权，不是任意选择其中一份许可。
 
-对外分享改编正文，需要署名、标明修改并按相同或兼容许可分享；代码的分发和修改版网络交互遵循 AGPL 对应源码义务。**不把一切私人修改都说成必须立即发布到全网，也不强制回传 PR。**只借鉴设计思想、遵守风格或使用技能协助开发，不因此自动要求独立产品整体开源；直接复制受保护代码/表达及衍生、组合情形另按适用许可判断。
+对外分享改编正文，需要署名、标明修改并按相同或兼容许可分享；代码的分发和修改版网络交互遵循 AGPL 对应源码义务。**不把一切私人修改都说成必须立即发布到全网，也不强制回传 PR。** 只借鉴设计思想、遵守风格或使用技能协助开发，不因此自动要求独立产品整体开源；直接复制受保护代码/表达及衍生、组合情形另按适用许可判断。
 
 保留 LD 原作来源不等于把他人的新增版权归 LD 所有。品牌不代表对衍生版本的官方背书，许可也不冒充注册法人或商标授权。
+
+---
+
+## 项目背景与联系
+
+> **自用项目** · 本仓库主要供维护者自用，公开分享持续实践中的协作方式。
+
+我们希望探索一种更适合未来人类与 **Agent / SuperAI** 配合开发的方式：人类仍然可以通过熟悉的 **Markdown、自然语言、接口与必要的代码**，具体地表达自己的欲望、创意、设计与边界；Agent 则承担更多细节实现、验证和日常维护。
+
+这不是让人类彻底无视代码，也不是把设计权交给黑箱。人类把重心更多放在“想要什么、为何需要、最终体验应该怎样”，同时保留理解、查看、调整和约束实现的入口。我们希望成果既能运行，也能被人读懂、接管和继续演进。
+
+本技能将这种分工落实为可执行的工程约定：小而清楚的控制接口、可替换实现、就近的 Markdown 模块说明、可追溯注释归属，以及按仓库可见性区分的提交记录（私有保留强制准确身份，公开默认只保留 Bot 昵称或 Agent 模型名；两者保留问题和解决方式）。**这些约定服务于协作，不以制造更多抽象层、文档或审批为目的。**
+
+LD = **LastDream · 最后的梦**。官网：[lastdream.net](https://lastdream.net)；B站：**最后的梦制作组**。
