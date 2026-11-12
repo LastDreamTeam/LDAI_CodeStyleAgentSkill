@@ -8,21 +8,9 @@
 
 它适合把较多实现工作交给 AI、同时希望保留理解和接管入口的开发者。人类表达目标、体验与边界，Agent 按约定完成实现、验证、记录和交接；已有项目的接口、人工改动与资源关系继续受到保护。
 
-```mermaid
-flowchart LR
-    H["人类<br/>目标 · 体验 · 边界"] --> R["Agent 先读<br/>相关约定与实际代码"]
-    R --> I["实现<br/>遵循契约 · 控制改动范围"]
-    I --> V["验收与交接<br/>实际测试 · 结果 · 共享记录"]
-    V -. "下次接手按需读取" .-> R
-    classDef human fill:#edf3ff,stroke:#5978ad,color:#173253;
-    classDef work fill:#f2f5f8,stroke:#768595,color:#243445;
-    classDef result fill:#eaf7f0,stroke:#4b886b,color:#153e2b;
-    class H human;
-    class R,I work;
-    class V result;
-```
 
-> **先分清能力来源：** 规范由 Agent 阅读并执行；附带脚本处理指定的维护、身份、项目策略与历史操作。它不会自动为项目装上源码分析器、Git 门禁或常驻服务。下面的图与示例是依据当前规范制作的教学模拟，**不是实测收益、性能数据或真实项目的改造截图**。
+
+> 规范由 Agent 阅读并执行，脚本提供指定辅助能力。下方用当前 0.5.1 的合成代码演示实际约束：图片是源码对照，不是业务工程截图或自动修复证明。图片通过公开代码的在线渲染链接展示，仓库内仍只改这一份 README；原代码可在各图下展开复制。
 
 ## 使用前后会有什么不同
 
@@ -40,69 +28,116 @@ flowchart LR
 
 这些是协作约束带来的**可检查差别**，实际改善取决于 Agent 是否执行、项目是否适配以及验证是否充分。用户只授权局部修复时，不把它扩成整个旧模块的重构。
 
-### 2. Unity 示例：保留小契约，让实现能继续替换
+### 2. 代码对照：同一段算法，能不能放心接手修改
 
-在已采用 LD Unity/OOP 约定的模块中，配对接口表达各实现必需的能力，Base 提供可迭代的基础层，Agentic 承接具体实现。已有接口的变更按人类或明确授权的架构裁决执行；普通小功能仍可保持简单。
+这个例子取自技能的[强制注释规范](skills/ld-codestyle-online/references/comments.md#c-最小示例)：将音频播放秒数映射为谱面毫秒，并补偿输出延迟。**两边的计算相同**；改变的是下一个维护者能否从代码旁看到单位、延迟方向和负值的用途。
 
-```mermaid
-flowchart TB
-    subgraph Before["使用前 · 可能的耦合"]
-        direction LR
-        B1["业务入口"] --> B3["某个具体脚本<br/>混合规则、状态与显示"]
-        B2["其他调用方"] --> B3
-        B3 --> B4["换实现时<br/>调用方也跟着改"]
-    end
-    subgraph After["采用后 · Unity 模块"]
-        direction LR
-        A1["业务入口与调用方"] --> A2["稳定的配对契约<br/>ITimerBase"]
-        A3["TimerBase<br/>基础能力与扩展面"] -. "实现" .-> A2
-        A4["Agentic/Timer<br/>具体派生实现"] -. "继承" .-> A3
-        A4 --> A5["Inspector 装配<br/>引用与生命周期可核对"]
-    end
-    Before ~~~ After
-    classDef old fill:#fff3ed,stroke:#b78062,color:#55321f;
-    classDef contract fill:#edf3ff,stroke:#5978ad,color:#173253;
-    classDef impl fill:#eaf7f0,stroke:#4b886b,color:#153e2b;
-    class B1,B2,B3,B4 old;
-    class A1,A2,A3 contract;
-    class A4,A5 impl;
-```
+![C# 源码前后对照：左侧仅有计算，右侧保留同一计算并补充函数契约、参数单位、延迟方向和预滚负值说明](https://kroki.io/vega/svg/eNqtV21P21YU_ivW2T7sxSV24iS2x5C6qZUmrarUVtqHlQ838U3i1bEj22EwZAla1lEWOsbIyksZpWUDdeJlGuooUJD6Vxrb4VP_wnTtJLWNk0HXj7nX93mec55zzr0ZhfeNfAmXEYhQMs2KISYSQ7iI-oqyWarm-mQt4e97q4mhdN83hqYCDd_KklkCkeV4hoYSloslE8S0wNNQQZIkq0UQGRpyKH-rqGtVVQIR3mNyLMPyQIOETATi16OgojIGEfKahIGGIaRUseFtmHjYBBEqujyETEwZJjLlPCVp1ZyCqRva5yWkm1dkRZENnNdUyfgAaBgGMc3RMEJUZWjIa4qmE1qJywmFAtCgVss5TJZY8mMYxBRv0R2uFnhFQSNE9nUfmG6TalWzUjW_RCZW8yNXjA99QkHoy_iU2XSAEmewVEgFKZNxlKMh1UmG6wmRioPQsVnV1ahq6iOKZRimj6EuRIV_EhGeTKV6snJxrFZYeCbZEyIdB5FIJKh-o1ouI31kwIfL8nH28WyO53Nx9mUzUcCrFaxe_EKk7J27zuymM3fkrs869R1n_pG9M9HY22_u_HWy_NjZ_tNdn319WIvQhiw8TZvsSuvce3KysNY8-sX-Yd8-eNY8Xnl9WGscL7v1hZPHE87BYnN3xR47fDV2O8wYdvw0Y6orY38iPnVhN08jct0RK0hHZYp05Kc3IVJPN2EgmM9XY7f7E973UfpQJZymT5-RPlKzN2EgmFzfv-4iBLaniEx3EX43GQPN1d_t8WN75r67OBGpGfun7eadF6SWdlc8Ce0zYRGpJNNTRDZWxHnnXYeNE3oOPD6W7a0mHp9sT45Ulu_Z9kIs6WhYOcdke4KwTBe33vT695PuwUpjb8yerjdeTBOL7k77HdnuxaWodC71HxOm24ih_E525zYa-_f93iatvjdtP9xwNtfstQln8qkzOXOy9KzT7QHaTO8Jw8aPmLed8QFioffVwsZPGivsVTrZ-6pgg9NlkOC07vcKUrFihG_4YRBZngYF5bACInx26fLVa5eol_9QjRfH7tyGfW8agmQ84vk8EEyCzwVOXrx849I1ctCp3WuuTzRrdxr7a42D-eBxHkvpHAPWoDVIQxnpt1qvjJEKkedFSwNWvXeIOApYNUlAHteoL5rMNsvLQmeBXGetTHXWgGGpBOXsz7iPxpvbu878_deHi87UlHuw60ytNY6Wnektt75gP9xoHDxxH407D8bBoqGgqeZ1-TscpMu21r9qPa46O1mGaW0FiQ2kGhcMrMsFD1BWlOBu2y3Lsjx__1fgWTYmcHum1tgbc7ceOH_XiRt-N1IJqjWzf31uz_xMJajWhXj03K3XPNfqC_bmH87GqvMjuTVPln9r7C3aU6snq8_dpa3m8UxzteZMPrWXjrokiuXPnw1BQignRLKh4zzJRkHXyuRj_5Harl2re5oKMlbI-3YYInkSiIWth3IgeZz15sXcWeayfJxQNsnmkjwBNkxdu4VDmymGY9MZspnXdBXr15AkV41gaphYv88doSEXVUR6TUJmtdw3_HEyGY2V9aqkXRTtlPg92sU34V0UeJvJb_WzhOuFeAY71Td-tpdGICbG1vizaECKXFSDknUvMIv8DzKwIqsh-0yt0i0z2Zjwy5qqGRWUx7EFneYzQrbwTuM_Y_je7_OHKJw1xNMGD1r_AiMlHEQ)
 
-图中的类名和路径均为合成示例。Agentic 是可识别的实现边界；Base 可以演进，成品挂具体派生实现。技能不要求给所有项目套上这套结构，也不要求为了分层制造空壳。
+读图重点：函数头部说明用途、参数与返回值；实现旁说明为什么扣除延迟、为什么保留负数。技能要求的是解释真实逻辑，不能只写“处理数据”，也不能为了加说明顺手改算法。`OpenAI:` 在这里演示提供方归属，实际代码使用实际提供方，不冒写人类标记。
+
+演示核对：两个版本都已在独立的纯 C# 夹具中编译运行。`0.01 秒 / 120 毫秒延迟` 均返回 `-110 毫秒`，`0.25 秒 / 120 毫秒延迟` 均返回 `130 毫秒`；补说明没有改变计算结果。
 
 <details>
-<summary><strong>看一个更小的源码前后对照：同一逻辑，补清用途与原因</strong></summary>
+<summary><strong>复制图中的完整 C# 对照代码</strong></summary>
 
-下面仅展示已有提示音方法的说明方式，两段执行逻辑相同；不是完整组件、重构补丁或 Unity 编译结果。调用方已保证音源和音频引用有效。
-
-**使用前：** 能看到动作，难以判断为什么这样播放。
+使用前：
 
 ```csharp
-public void PlayCue(AudioClip clip)
+private static double ToChartMilliseconds(
+    double playbackSeconds, double outputLatencyMs)
 {
-    m_Source.PlayOneShot(clip);
+    return playbackSeconds * 1000.0 - outputLatencyMs;
 }
 ```
 
-**按规范交付：** 函数头部解释契约，核心调用旁解释不应被后续改掉的原因。
+按规范交付：
 
 ```csharp
 /// <summary>
-/// OpenAI: 叠加播放一次提示音，不替换当前背景音的 clip。
+/// OpenAI: 将播放秒数映射为谱面毫秒，
+/// 扣除输出延迟，保留预滚负值。
 /// </summary>
-/// <param name="clip">由调用方提供并保证有效的提示音资源。</param>
-public void PlayCue(AudioClip clip)
+/// <param name="playbackSeconds">播放秒数。</param>
+/// <param name="outputLatencyMs">输出延迟毫秒。</param>
+/// <returns>补偿后的谱面毫秒，可能为负。</returns>
+private static double ToChartMilliseconds(
+    double playbackSeconds, double outputLatencyMs)
 {
-    // OpenAI: 保留当前播放状态，避免用替换 clip 的方式打断背景音。
-    m_Source.PlayOneShot(clip);
+    // OpenAI: 先统一单位，再扣除延迟；
+    // 负值用于预滚，不在此处截成零。
+    return playbackSeconds * 1000.0 - outputLatencyMs;
 }
 ```
 
-`OpenAI:` 仅演示注释的提供方归属；实际新增注释应写实际提供方，不能冒写 `LD:` 等人类标记。未改动旧函数的注释缺口留到专门打扫，不要求每次任务补完整仓。
+</details>
+
+### 3. 生命周期对照：避免重复启用后回调越积越多
+
+以下展示一个常见的生命周期审查点：普通 C# 事件在 `OnEnable` 中订阅后，应在对应的 `OnDisable` 中解除。**前提是当前模型在启用期间不被替换，且模型引用已正确装配。**
+
+![C# 生命周期前后对照：使用前只有 OnEnable 订阅，采用后补齐有文档与原因说明的 OnEnable 和 OnDisable，成对订阅及解除自身回调](https://kroki.io/vega/svg/eNqtV11P21YY_ivW6S421U1sx4k_1k3qOirtYkJi03Yxoek4Pkk8HDuyHRoWWYICYgwCRW3Hx_hQV1QitgEXFWsJCGl_pXY-rvgL07GT1CZOGrRe5j3287zv8z6v35My-MhM51AeAhHkLKtgivH4JMrCWFaxckUppuhx_9yLxieTsZ9MXQMkeKjIVg6INMtTJMghJZuzgJhMCSQoQFlWtCwQKRJIMD2RNfSiJgMR3KIkmqJ5QAIZWhCIP5SBBvMIiCCtywiQYBKqRWR6BxYqWUAEBUOZhBYiJnVFJka1EQ1KKvr4E0CCEhCTLAmmcAopEqR1VTcwh8xKQiYDSKAV8xLCIRr_KAExwdtkF7gchuCSAQiUQnImEYRgoiDyP36ty0iN3c9BLYtk4vZnxBjKGMjMfaegh5_6BIIQS3kUDMUOpEhEUdihLJlEYiAEGwURRkgxAxGSUQjxONE4P3NP1pzXK82jP1ob8635inv8prE11zx40drcrz-pOBfbb6cfhbkEOsDF0xLPS0GuVB-u1kLF3a-4j48bT6vu6nFz9sKP-NTXWRIMNZCFi2aJE3fNYj4PjanPRwtIu_eVSPiM9fVTn8i9eOIuVurV5-7u0tvpR3fjned9eo6PMl8vf8d8XCqYwEBbd6FDpuz1NRMJXQ6DDGu7MEg8TnRk8dVoHK67qy-c1yuN2pxTO_W16gSnmwuvun3hma7jQ3btlYaNpB5qqgIkQzo6TGJfEylk1V6QVCRIGCNsxF4Mro_QEU5svJxpO9Efr-2_fNXxwHWGoJ8fE6wwUHR-GD9-qZhRhkxw_EBDCsMYkqW4gTrR1Psc6a4eNg5qrc395sJh8-xP9_fd5sns1fmyc7nTeLbpzp86td98nZrT8xG-ZBPvGVl6KGPeGWxMNjV4pdDMMM5khcHjSwfndxzjtDdqAWpINcM7tQREmieBCiWkAhF8MfJgdGyE-Pcfwrm4xB_bxQoIkvGQ59MAY2J8NvDmvQffjozhF-vLi82DuebyrHO279Q2gq_zSE5KFLDH7XES5KEx0d7rUwWcnlctCZDmbX6xDJBm4YI8rrKfNB5u21OhG8Bf8bZS3RigGCJONJ7uuWsX7lq1vr13db7l9x8vLH-EfnnsHr9xF84aKyfAJkFG16xvlJ9RkItrx79v32W6JxxFtY-CrCbUzDsmMpSMB6ioavC00yrbtr3m_q-qOTqi6vrmUWt6i7h_i3DOlpzaKW5HcGe529X2Rtvea62_ci536sszzuuKu7rhde7Zpvv3y3r1eX1p7-p8ubWz21w4dH-tOpdHeNcez9Q3VvooRfM3l0OQIZSEa3IYKI3lyBh6Hj_sXwo7zrX765RRkIrvkyVwTSgB97B9MQ2ox9rvbqjdMMsKUYnSDC0xPAY2LUOfQKHDBMXSyRQ-TOuGhowxKCtFMygNFdnwG1doKlkN4kmToVXMx0q3GeZ6rbRnk44rOpL4E9qnb8KHcHiHyR_0Ycr1Shyindq7fnZCUyCixvbHzyYBVJWsFkzZ8Aqz8f8OE6mKFmqfpRf6KcNFlJ_XNd0swDSKNHSSTwlc5oPWP2T53u-blygMW2Jvg8ft_wB2ktuw)
+
+对应的关键修改可以直接看 diff：
+
+```diff
++ /// <summary>OpenAI: 启用时订阅当前模型。</summary>
+  private void OnEnable()
+  {
++     // OpenAI: 订阅窗口与组件启用窗口一致。
+      m_Model.Changed += RefreshView;
+  }
+
++ /// <summary>OpenAI: 禁用时解除本组件的订阅。</summary>
++ private void OnDisable()
++ {
++     // OpenAI: 只移除自身回调，保留其他订阅者。
++     m_Model.Changed -= RefreshView;
++ }
+```
+
+这是一项需要 Agent 核对并验证的具体改动，不是技能自带的自动扫描/修复器。若模型会在启用期间更换、订阅来自其他对象或需跨禁用期保留，就必须先核真实所有权与业务要求，再选择正确的解除位置，不能机械照抄。
+
+演示实测：在独立的纯 C# 夹具中执行三轮启停，再启用并发布一次事件，使用前触发 **4 次**回调，配对解除后触发 **1 次**；再次禁用后发布事件，后者不再新增回调。本页两个示例合计 **7 个断言通过**。这验证了片段的计算与普通 C# 事件行为，未声称实际 Unity 场景、装配或业务工程已验收。
+
+<details>
+<summary>复制图中的完整生命周期片段</summary>
+
+使用前：
+
+```csharp
+private void OnEnable()
+{
+    m_Model.Changed += RefreshView;
+}
+
+// 缺少与订阅配对的解除操作。
+// 重复启用可能重复订阅。
+```
+
+按规范交付：
+
+```csharp
+/// <summary>OpenAI: 启用时订阅当前模型。</summary>
+private void OnEnable()
+{
+    // OpenAI: 订阅窗口与组件启用窗口一致。
+    m_Model.Changed += RefreshView;
+}
+
+/// <summary>OpenAI: 禁用时解除本组件的订阅。</summary>
+private void OnDisable()
+{
+    // OpenAI: 只移除自身回调，保留其他订阅者。
+    m_Model.Changed -= RefreshView;
+}
+```
+
+这两个片段省略外围类型和 `RefreshView` 实现，用于比较同一事件订阅场景；不作为可直接挂载的完整 Unity 组件。
 
 </details>
 
-### 3. 换会话、换 Agent：从聊天里找，变成从模块入口找
+### 4. 换会话、换 Agent：从聊天里找，变成从模块入口找
 
 ```mermaid
 flowchart TB
@@ -132,30 +167,28 @@ flowchart TB
 
 这里的“记住”依赖项目文件和 Agent 主动读取，不等于宿主自动注入，也不是导出 Bot 的私人记忆。文件放在 `Agentic/`，逻辑范围仍由所属 README 声明；每份文件的头部也须能独立说明职责、范围与维护边界。只有已声明采用精选历史的区域，才使用 SQLite 存完整记录。
 
-### 4. 验收与提交：把“做了什么”同“验证到哪”一起留下
+### 5. 交付对照：从一句“修好了”到可复核的记录
 
-```mermaid
-flowchart TB
-    subgraph Develop["开发时 · 分层验收"]
-        direction LR
-        S["语法检查<br/>含相关 Editor 路径"] --> C["项目真实编译"]
-        C --> T["最小运行入口<br/>用户操作与效果验证"]
-    end
-    subgraph Deliver["交付时 · 留下可复核结果"]
-        direction LR
-        E["交付证据<br/>结果、未验项与回档边界"] --> G["审查并提交<br/>依赖、身份、问题与解决"]
-        G -. "推送或合并后" .-> R["针对准确版本<br/>重跑受影响流程"]
-    end
-    Develop --> Deliver
-    classDef stage fill:#edf3ff,stroke:#5978ad,color:#173253;
-    classDef result fill:#eaf7f0,stroke:#4b886b,color:#153e2b;
-    class S,C,T stage;
-    class E,G,R result;
+| 缺少约定的交接 | 按技能执行的交接内容 |
+|---|---|
+| `fix bug` / “已修复，测试通过” | 实际执行身份、具体问题、改了哪里、验证到哪、尚未验证什么 |
+| “重复回调已处理” | 说明订阅窗口、解除位置、模型引用是否可更换，以及启停后回调次数的检查结果 |
+| “以后记住这个坑” | 在所属 DEBUG 的同类条目中保留触发条件、有效修复与回归流程 |
+
+提交结构示意如下；占位项必须换成实际信息，不能把示例预期写成已完成的验收：
+
+```text
+##模型：<实际昵称或具体模型名> | 修复组件重复订阅
+
+##问题：
+<实际复现入口、用户可见症状及已确认原因>
+
+##解决：
+<实际改动、有效验证、被测版本和未验边界>
 ```
 
-这是需要 Agent 执行的验证顺序；图中没有任何一步代表已经在你的项目里通过。缺少设备、Editor 或权限时，应明确留下未验边界。
+本页代码演示仅覆盖有限场景：真实交付仍要依次核语法、项目编译、最小运行入口和受影响的用户流程，并在推送或合并后对准确版本复核。缺设备、Editor 或权限时明确标未验。公开仓库默认只保留 Bot 昵称或具体模型名，私有仓库按完整身份要求执行；公开前仍须检查隐私及全部待推送历史。
 
-提交说明由笼统的 `fix bug` 改为“可核身份 + 具体摘要 / 问题 / 解决与验证”。公开仓库默认只保留 Bot 昵称或具体模型名；私有仓库使用完整身份要求。公开前仍须检查隐私与全部待推送历史，签名格式本身不会扫描秘密。
 
 ## 安装
 
