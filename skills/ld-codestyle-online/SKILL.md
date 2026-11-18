@@ -1,6 +1,6 @@
 ---
 name: ld-codestyle-online
-description: "LD (LastDream) coding conventions for AI agents. Use when writing, reviewing or committing code, branching, opening or reviewing PRs, filing Issues, editing a root README or reporting results to a human. Covers commit identity (##模型/##问题/##解决) in every repo, shared README + Agentic/USER|MEMORY|DEBUG memory in any project, and LD source style (function header docs, provider-tagged comments, I<Type>Base, .Agentic, scoped formatting) in LD/LastDreamTeam first-party or adopting projects."
+description: "Apply LD coding style when writing or reviewing first-party LD/LastDreamTeam code or code in projects that adopt it. Use for committing with accurate identity across repos, shared Markdown memory, branching and reviewing PRs, filing Issues, editing a root README, and reporting results. Check comment ownership and scoped formatting. Use paired Base interfaces and .Agentic only where adopted."
 version: 0.6.1
 author: "LD (LastDream / 最后的梦), Hermes Agent"
 license: "CC-BY-SA-4.0; scripts: AGPL-3.0-only"
@@ -22,7 +22,7 @@ metadata:
 1. **提交身份是全仓库规则**：所有 AI 的新提交均适用，与引擎、语言、项目重量、是否采用OOP及共享记忆黑名单无关。私有按Bot/Agent强制准确身份；public按默认简化身份或主人明确要求执行。
 2. **共享 Markdown 记忆采用默认启用、明确排除的黑名单规则**：当前宿主存在本技能时，Unity、UE/Unreal、Cocos、Godot及同类重型生产/工业引擎的一方项目强制应用；Web/H5、Vue、Node.js、PHP、TypeScript、Python及无底层引擎项目也默认启用，无需逐项目询问是否采用。主人明确要求某项目不使用共享记忆时，才记录其真实项目根到本机环境变量黑名单；不凭轻量、非Unity、旧项目或嫌麻烦自行排除。
 3. 使用 `python -B scripts/project_memory.py show --project-root "<真实项目根>"` 查询当前项目。按[跨项目记忆与黑名单](references/memory-scope.md)识别真实根、映射模块路径与README同级逻辑范围；配置坏值报错，不假定启用/排除。排除仅停止本技能自动创建/维护该项目共享记忆，不删除既有资料、不关闭身份或版本健康要求，也不影响兄弟项目。只读任务仍按需读取，写任务才在触及区域建立/维护有真实内容的文档，不做全仓空模板铺设。
-4. **其余源码风格与Unity/OOP规则单独判适配**。满足任一条件即视为已采用LD源码风格：仓库归属 LD/LastDreamTeam（含其组织、维护者本人一方仓库或本机一方工程）；项目 `AGENTS.md`、根或区域 README 声明采用本技能/LD约定；一方源码已有 `LD:` 人类标记、`I<类型>Base` 配对接口、`.Agentic` 命名空间等真实LD约定；用户当次明确要求。采用后，[强制注释](references/comments.md)、[注释归属](#注释归属)、[代码格式整理](references/contract.md#代码格式整理)、命名与序列化保护、[插件纯净](references/contract.md#插件纯净与必要改写)按语言适配执行，不论是否Unity。Unity专属结构（`Assets/` 且有 `ProjectSettings/ProjectVersion.txt` 才是Unity工程）、配对Base、Model/Manager/ViewModel/View、Inspector与资产规则只在Unity或项目已采用该结构时执行，不为其他技术栈制造Base接口、C#目录或OOP层。第三方、他人或未采用项目只适用前两层；仅默认启用Markdown记忆和提交身份不等于自动采用全部源码规范。SQLite历史流程仍按已声明采用的区域执行。
+4. **其余源码风格与Unity/OOP规则单独判适配**。已核实由 LD/LastDreamTeam 开发的项目，其一方源码默认采用 LD 风格，不论是否Unity。第三方或他人项目须明确采用，以项目 `AGENTS.md`、所属 README 的声明或用户当次明确要求为据。`LD:`、`I<类型>Base`、`.Agentic` 可帮助查找已采用的区域，不能仅凭工作目录、fork 归属、孤立标记或随包示例推定项目采用。编辑前按语言落实[函数文档与原理注释](references/comments.md)、[注释归属](#注释归属)、[局部格式整理](references/contract.md#代码格式整理)、现有命名保护及[插件边界](references/contract.md#插件纯净与必要改写)。在已采用源码规则的范围内，Unity 项目须同时有 `Assets/` 和 `ProjectSettings/ProjectVersion.txt` 才套用 Inspector 与资产规范。配对 Base、Model/Manager/ViewModel/View 等按项目采用的结构执行。精选 SQLite 历史由责任区另行声明。
 5. **协作流程与写作约定**：[分支与两次合并请求](references/branch-workflow.md)、[合并请求的技术审查](#合并请求的技术审查)是项目未声明自己分支、合并或审查规则时的默认做法，项目 `AGENTS.md`/README 有约定以项目为准。[Issue 与根 README](references/public-writing.md)和[给人类的最终回执](references/interaction.md#给人类的最终回执)适用于 AI 在任一项目写给人看的产物，目标项目已有规则优先。它们不新增提交、推送、合并或发布授权，也不把用户当前已明确的决定再设一道闸。
 6. 当前请求和最近工程规则优先；默认记忆维护不扩大业务任务、提交、发布、重构或第三方修改授权。生成代码、第三方原插件和无关工程不因路径映射被接管。
 
@@ -152,7 +152,7 @@ Unity自动重新序列化中无必要业务语义的差异默认不上传；真
 3. **亲自运行项目已有且适用的门禁。** 在待审提交上实跑语法检查、项目编译、测试和文档契约测试，按影响范围实测可运行入口及实际效果。不能凭作者自述签字放行。分别记录被测提交、运行结果、未验项及原因，编译通过不能代替效果验收。
 4. **给出技术结论和缺口清单。** 写明哪条判据受影响、证据在哪、还需谁裁决。审查默认只出意见，不顺手改作者代码。确需修改时，在授权范围内另起改动，用自己的提交身份署名。自审不算独立复审，技术通过仅回答该版本是否满足适用判据。是否合并由人决定。合并动作、快进或压缩等方式，以及合并前后如何读回核验，归执行侧发布与流程规范。何时提交材料、何时可考虑合并见[分支与两次合并请求](references/branch-workflow.md)。
 
-本节暂定。实战遇到原判据未说清的分歧，先在本项目的 PR/Issue 或所属区域 DEBUG/MEMORY 记下来源审查、分歧点及处理依据。可通用的判据缺口经脱敏、且对外写入获授权后，再到本技能仓库新开 Issue 并链接[审查规则议题 #27](https://github.com/LastDreamTeam/LDAI_CodeStyleAgentSkill/issues/27)的历史，据此补本节指引；不把私有项目记录追加进上游公开议题。判据细目继续在各自原章节维护。
+本节暂定。遇到判据分歧，先在本项目的 PR/Issue 或所属区域记忆里保留原审查、分歧和处理依据。通用经验经脱敏并获授权对外分享后，在[审查规则议题 #27](https://github.com/LastDreamTeam/LDAI_CodeStyleAgentSkill/issues/27)追加可公开的案例与依据，保留原文。私有项目记录留在原可见范围内。上游根据实际案例补充入口，判据仍在各自原章节维护。
 
 ## 流程与验收
 
@@ -161,7 +161,7 @@ Unity自动重新序列化中无必要业务语义的差异默认不上传；真
    委派时交代明确范围、真实基线、依赖/接口约束与验收；主Agent复核整合diff和实际依赖，不能只采信子Agent的完成摘要。头衔或队友身份不自动授予架构裁决权，详见[协作契约](references/contract.md#修改迁移与验证)。
 3. 复用当前有效模块；历史工程只提供行为参考，迁移不盲搬旧架构。不擅改插件：优先项目侧扩展，确需侵入改写时最小化、就地标 `项目侧改写点`，并在插件目录外的必读入口登记清单，升级后按清单补回，见[插件纯净与必要改写](references/contract.md#插件纯净与必要改写)。不直接手改 Unity 序列化场景/预制件，不覆盖人工未保存内容。
 4. 按[强制注释验收](references/comments.md#执行委派与提交验收)核本次新写和改动函数的头部、核心原理行注释与语义；委派同样说明范围，主Agent亲读源码复核，未改动旧函数的注释缺口留到打扫。按[代码格式整理](references/contract.md#代码格式整理)整理本次改动范围，保持原编码与换行，清理本次调试残留，不全文件重排。再核配对接口、Base 扩展面、命名空间、插件边界、Inspector Tooltip、注释归属、模块索引及序列化兼容；有真实增量才更新共享文档，保护历史Readme和已有meta。
-5. `.cs` 改动先用该终端可用的检查器过语法门禁，包含 `UNITY_EDITOR` 编译路径；缺依赖与语法错误分开，不假定某台机器私有脚本存在。
+5. `.cs` 改动先用可用的检查器按项目真实编译条件过语法门禁。Unity 工程还要覆盖 `UNITY_EDITOR` 路径。分别记录依赖缺失和语法错误。
 6. 再做项目真实编译与最小可运行入口验证。画面/听音/交互分别实际核验；语法通过不等于 Unity 编译，通过编译不等于效果验收。
 7. 提交前逐项核目标可见性、staged paths、人工改动、对应公开/私有格式和真实验证边界；公开前核待推送历史与个人/企业隐私脱敏。任何失败不写成 PASS，不清理脏文件来掩盖问题。
 8. 推送后回读远端准确提交，参考本区域 DEBUG 实际尝试受影响业务流程；合并后核合并结果并对新版本再测。未合并或没有加载目标版本时保留未验状态；只记录实际运行结果和范围，见[DEBUG回归规则](references/directory-context.md#推送后与合并后的回归)。
@@ -170,7 +170,7 @@ Unity自动重新序列化中无必要业务语义的差异默认不上传；真
 
 ## 常见误用
 
-- 不把三层范围混为一谈：身份覆盖所有仓库，共享Markdown记忆默认开启/明确项目黑名单，源码风格按采用判定、Unity/OOP结构再看适配。不能用“非Unity”或“不采用LD架构”绕过前两层，也不能用“不是Unity”跳过LD一方项目的注释、归属与格式规则。
+- 提交看可见性，共享记忆看责任区与项目黑名单，源码风格看一方归属或明确采用，Unity/OOP 结构另看项目适配。LD 的非 Unity 一方项目同样执行注释、归属与格式规则。
 - 不把接口全锁死，也不把 Base/Agentic 当扩大权限的理由。
 - 不为消除眼前报错删引用、加替代桩或改插件原件来“拆东墙补西墙”；先核调用链与影响范围，修复后把有效经验写入所属区域记忆，防止复发。
 - 配置改名不是修改已有人工注释的授权，更不是改变版权主体。

@@ -9,11 +9,14 @@
 - 技能安装单元是完整的[技能目录](../skills/ld-codestyle-online/SKILL.md)，包括脚本、引用、模板和版本清单。只复制入口不能运行身份、维护或项目策略工具。
 - [维护工具](../skills/ld-codestyle-online/scripts/maintain.py)按真实安装路径隔离偏好；版本和健康是独立信息。`health`离线重算，`dirty=false`有24小时证据期限；没有健康门禁参数时退出0只代表报告成功。
 - 身份、共享Markdown记忆、Unity/OOP架构适配是三层独立规则。记忆黑名单不影响身份和健康要求；不应因为非Unity而跳过提交身份，也不能因为默认记忆而强造Base接口。
-- 0.6.1 起源码风格与 Unity/OOP 结构分开判定：LD/LastDreamTeam 一方仓库、项目声明、源码已有 LD 约定或用户要求任一成立即执行注释/归属/格式/插件保护；结构规则另看 Unity 或已采用。分支、审查、Issue、首页与回执是让位于项目约定和当前指令的默认做法。判定写在 [SKILL 何时启用](../skills/ld-codestyle-online/SKILL.md#何时启用)，契约测试见 `tests/test_scope_adoption_contract.py`（只证文档存在，不证外部 Agent 遵守）。
+- 0.6.1 起源码风格与 Unity/OOP 结构分开判定：已核实的 LD/LastDreamTeam 一方源码默认执行注释、归属、格式和插件保护。其他项目以明确采用为据，局部标记用于定位适用区域。Unity 专属规则另核引擎，结构规则另核项目约定。分支、审查、Issue、首页与回执是让位于项目约定和当前指令的默认做法。判定写在 [SKILL 何时启用](../skills/ld-codestyle-online/SKILL.md#何时启用)，契约测试见 `tests/test_scope_adoption_contract.py`（只证文档存在，不证外部 Agent 遵守）。
 - [项目记忆策略](../skills/ld-codestyle-online/scripts/project_memory.py)面向当前计算机的真实项目根。路径相邻不代表同一项目；建议环境值与已经生效的持久环境必须分开报告。行为验证见对应单元测试和[DEBUG](DEBUG.md)。
 - 本仓库自身作为无底层引擎的Python实例，以根README声明这一责任区，三份Markdown集中在Agentic。此例验证 Python 仓库内的文档路径关系。Go/Windows 的实际接手范围见[两仓维护者复跑记录](DEBUG.md#go-服务端与-windows-桌面客户端接手试点20)，各引擎仍按真实项目分别验证。
 
 ## 变更记录
+
+2026-11-19：补明第一方来源和其他项目的采用凭据，供接手时判断规则范围。
+`##模型：gpt-6.2-astra | 校准源码风格适用范围`
 
 2026-11-19：新增源码风格采用判定与协作流程归层的机制索引（暂定，首次记录）。
 `##模型：claude-opus-5-5 | 记录0.6.1采用判定机制`

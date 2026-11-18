@@ -36,8 +36,9 @@ python -B scripts/maintain.py health
 
 ```sh
 python -B scripts/maintain.py health --require-healthy
-python -B scripts/maintain.py health --min-version "<依赖方要求的版本，如 0.6.1>"
-python -B scripts/maintain.py health --require-version 0.5.0 --require-healthy
+# 以下以依赖方需要 0.6.1 为例，使用时换成项目实际版本
+python -B scripts/maintain.py health --min-version 0.6.1
+python -B scripts/maintain.py health --require-version 0.6.1 --require-healthy
 ```
 
 | 字段 | 含义 |

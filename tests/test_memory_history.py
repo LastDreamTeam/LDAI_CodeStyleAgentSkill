@@ -172,7 +172,9 @@ class MemoryHistoryTests(unittest.TestCase):
             text = (skill / f'templates/module-{kind}.md').read_text(encoding='utf-8')
             header = text.split('\n## ', 1)[0]
             with self.subTest(kind=kind):
-                for term in ('history.sqlite3', 'Unicode字符', 'scope', '内容压缩', '不全库注入'):
+                # OpenAI: 已声明采用后缺库是需报告的故障，不能把它解释为区域从未启用。
+                for term in ('history.sqlite3', 'Unicode字符', 'scope', '内容压缩', '不全库注入',
+                             '已采用而缺库时保留原文并报告缺库'):
                     self.assertIn(term, header)
         for kind in ('user', 'debug'):
             data = json.loads((skill / f'templates/history-{kind}.example.json').read_text(encoding='utf-8'))

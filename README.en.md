@@ -2,7 +2,7 @@
 
 [简体中文](README.md)
 
-Use this skill when you hand implementation to a coding agent and still want to decide what changes, check what works, and let someone else take over. It gives people and agents shared rules, Markdown templates and small Python tools.
+Use this skill to keep LastDream’s coding conventions when handing implementation to an agent. The maintainer sets the interfaces and design intent, checks the result, and can take over the implementation. It gives people and agents shared rules, Markdown templates and small Python tools.
 
 For example, when fixing repeated event callbacks, an agent traces who subscribes and unsubscribes, exercises repeated enable/disable cycles, and records the result where the next maintainer can find it. The [worked examples](README.md#使用前后会有什么不同) include the code and measured results for a small C# fixture. Project-specific behavior needs its own test.
 
