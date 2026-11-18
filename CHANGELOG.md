@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.0 — 2026-11-18
+
+- [#25](https://github.com/LastDreamTeam/LDAI_CodeStyleAgentSkill/issues/25) 和 [#27](https://github.com/LastDreamTeam/LDAI_CodeStyleAgentSkill/issues/27) 将分支选择、两阶段合并流程和按影响范围独立审查接起来。分支类型前缀留待用户决定，技术审查引用原有契约。
+- [#24](https://github.com/LastDreamTeam/LDAI_CodeStyleAgentSkill/issues/24)、[#28](https://github.com/LastDreamTeam/LDAI_CodeStyleAgentSkill/issues/28) 和 [#29](https://github.com/LastDreamTeam/LDAI_CodeStyleAgentSkill/issues/29) 补齐问题标题与标签、面向人类的回执、项目首页和图片核查，增加本仓英文阅读入口。
+- [#20 跨仓接手记录](Agentic/DEBUG.md) 记录真实业务验证的版本、操作与边界。共享记忆范围、旧资料保护、工具 CLI 和现有配置格式继续适用。
+
 ## 0.5.1 — 2026-11-11
 
 - 落实Issue #21的默认提交/推送边界：以其他设备或干净检出完整复现更新为目标，保全真实源码、资源、配置、依赖声明、正式构建/测试脚本及必要文档；排除非必要的一次性调试脚本、实验现场、日志/转储/截图和中间产物，按用途而非扩展名判定。

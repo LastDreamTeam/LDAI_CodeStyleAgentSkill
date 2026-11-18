@@ -1,0 +1,21 @@
+# LDAI CodeStyle Agent Skill
+
+[简体中文](README.md)
+
+Use this skill when you hand implementation to a coding agent and still want to decide what changes, check what works, and let someone else take over. It gives people and agents shared rules, Markdown templates and small Python tools.
+
+For example, when fixing repeated event callbacks, an agent traces who subscribes and unsubscribes, exercises repeated enable/disable cycles, and records the result where the next maintainer can find it. The [worked examples](README.md#使用前后会有什么不同) include the code and measured results for a small C# fixture. Project-specific behavior needs its own test.
+
+## Quick start
+
+Use an agent host that supports local skills or its own skill manager, with terminal and network access. The helpers require Python 3.10 or later. The Git installation route also requires Git. Give your agent this instruction:
+
+> Read https://github.com/LastDreamTeam/LDAI_CodeStyleAgentSkill/blob/main/skills/install.md and install `ld-codestyle-online` for this agent. Verify the host discovers the complete skill and report its installed version and update status.
+
+The [installation guide](skills/install.md) includes host-specific commands. Once installed, try “Read the module README, find the current decision, and rerun the relevant user workflow. Tell me what you verified.” The [skill entry](skills/ld-codestyle-online/SKILL.md) links the rules and tools.
+
+## Scope and evidence
+
+Commit attribution applies across repositories. Shared Markdown memory is enabled by default unless the owner explicitly excludes a project. Unity and object-oriented architecture conventions apply only where adopted and appropriate. Teams retain their project-specific requirements and merge authority.
+
+Find the latest package in [Releases](https://github.com/LastDreamTeam/LDAI_CodeStyleAgentSkill/releases), behavior changes in the [changelog](CHANGELOG.md), and repeatable checks and limitations in the [verification notes](Agentic/DEBUG.md). See [contributing](CONTRIBUTING.md) for the review process and [LICENSE](LICENSE) for the documentation and code licenses.

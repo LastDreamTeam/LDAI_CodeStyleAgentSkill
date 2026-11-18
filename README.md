@@ -2,15 +2,15 @@
 
 **给日常编程 Agent 一套可持续执行的协作约定，让需求、实现与交接都有据可查。**
 
-技能名：`ld-codestyle-online` · 当前版本：**0.5.1** · 形式：**规范 + 模板 + Python 辅助工具**
+技能名：`ld-codestyle-online` · 当前版本：**0.6.0** · 形式：**规范 + 模板 + Python 辅助工具**
 
-[看使用前后](#使用前后会有什么不同) · [安装](#安装) · [日常用法](#日常怎么用) · [适用范围](#当前阶段与适用范围) · [详细手册](#详细手册)
+[看使用前后](#使用前后会有什么不同) · [安装](#安装) · [日常用法](#日常怎么用) · [适用范围](#当前阶段与适用范围) · [详细手册](#详细手册) · [English](README.en.md)
 
 它适合把较多实现工作交给 AI、同时希望保留理解和接管入口的开发者。人类表达目标、体验与边界，Agent 按约定完成实现、验证、记录和交接；已有项目的接口、人工改动与资源关系继续受到保护。
 
 
 
-> 规范由 Agent 阅读并执行，脚本提供指定辅助能力。下方用当前 0.5.1 的合成代码演示实际约束：图片是源码对照，不是业务工程截图或自动修复证明。图片通过公开代码的在线渲染链接展示，仓库内仍只改这一份 README；原代码可在各图下展开复制。
+> 规范由 Agent 阅读并执行，脚本提供指定辅助能力。下方保留 0.5.1 已验证的合成代码，用来演示实际约束：图片是源码对照，不是业务工程截图或自动修复证明。图片通过公开代码的在线渲染链接展示；原代码可在各图下展开复制。
 
 ## 使用前后会有什么不同
 
@@ -553,7 +553,9 @@ python -B scripts/maintain.py config --idle-after-minutes 15
 
 ## 版本与贡献
 
-技能名固定为 `ld-codestyle-online`，当前版本 **0.5.1**（默认推送内容边界、尽力核查后的两方案求助与独立工作续行；保留0.5.0身份、跨项目记忆及健康机制），见 [Release 包](https://github.com/LastDreamTeam/LDAI_CodeStyleAgentSkill/releases/tag/v0.5.1) 与 [CHANGELOG.md](CHANGELOG.md)。此前tag与附件保持不变，不改技能名来分发。配置schema仍为1，原地保留偏好；新安装自动更新默认开启，已有关闭值保留并标脏，运行中任务不静默切规则。
+开发从[分支与合并流程](skills/ld-codestyle-online/references/branch-workflow.md)开始。提交 PR 前可查[技术审查依据](skills/ld-codestyle-online/SKILL.md#合并请求的技术审查)。报告问题或整理首页时见[Issue 与根 README](skills/ld-codestyle-online/references/public-writing.md)，给用户交付时见[最终回执](skills/ld-codestyle-online/references/interaction.md#给人类的最终回执)。
+
+技能名固定为 `ld-codestyle-online`，当前版本 **0.6.0** 增加分支、审查与面向人类的文档约定，延续 0.5.1 的推送边界和求助规则，见 [发布包](https://github.com/LastDreamTeam/LDAI_CodeStyleAgentSkill/releases) 与 [CHANGELOG.md](CHANGELOG.md)。此前tag与附件保持不变，不改技能名来分发。配置schema仍为1，原地保留偏好；新安装自动更新默认开启，已有关闭值保留并标脏，运行中任务不静默切规则。
 
 Release ZIP用于允许文件包安装的宿主，不绕过原生管理器审批，也不具有Git fast-forward更新能力；现有Git/Hermes安装仍走原管理方式，不用ZIP覆盖。升级前内容可从 [legacy备份分支](https://github.com/LastDreamTeam/LDAI_CodeStyleAgentSkill/tree/legacy/main-20261016-6aa86d5) 核对。
 
