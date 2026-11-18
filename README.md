@@ -2,11 +2,23 @@
 
 **给日常编程 Agent 一套可持续执行的协作约定，让需求、实现与交接都有据可查。**
 
-技能名：`ld-codestyle-online` · 当前版本：**0.6.0** · 形式：**规范 + 模板 + Python 辅助工具**
+技能名：`ld-codestyle-online` · 当前版本：**0.6.1** · 形式：**规范 + 模板 + Python 辅助工具**
 
-[看使用前后](#使用前后会有什么不同) · [安装](#安装) · [日常用法](#日常怎么用) · [适用范围](#当前阶段与适用范围) · [详细手册](#详细手册) · [English](README.en.md)
+[核心约定](#核心约定一览) · [看使用前后](#使用前后会有什么不同) · [安装](#安装) · [日常用法](#日常怎么用) · [适用范围](#当前阶段与适用范围) · [详细手册](#详细手册) · [English](README.en.md)
 
 它适合把较多实现工作交给 AI、同时希望保留理解和接管入口的开发者。人类表达目标、体验与边界，Agent 按约定完成实现、验证、记录和交接；已有项目的接口、人工改动与资源关系继续受到保护。
+
+### 核心约定一览
+
+| 约定 | Agent 在做什么 | 详细规则 |
+|---|---|---|
+| 函数头部文档 + 原理行注释 | 新写和改动的函数都写头部说明，核心逻辑旁写“为什么”，旧代码另做打扫 | [强制注释](skills/ld-codestyle-online/references/comments.md) |
+| 注释归属 | AI 的说明标实际提供方（如 `OpenAI:`），`LD:` 等人类标记只保护不冒写 | [注释归属](skills/ld-codestyle-online/SKILL.md#注释归属) |
+| 配对 Base 接口与 `.Agentic` | `I<类型>Base` 是人类控制面，Base 可迭代，AI 实现放可替换的 Agentic 层 | [协作契约](skills/ld-codestyle-online/references/contract.md#模块结构与控制边界) |
+| 只整理改动范围 | 跟随工程格式、保持编码与换行，不全文件重排，插件优先项目侧扩展 | [格式与插件](skills/ld-codestyle-online/references/contract.md#代码格式整理) |
+| 模块共享记忆 | 区域 README 做索引，`Agentic/USER·MEMORY·DEBUG` 记要求、经验与回归流程 | [目录共享上下文](skills/ld-codestyle-online/references/directory-context.md) |
+| 可追溯提交 | `##模型：` 首行加 `##问题：` / `##解决：`，公开与私有分别署名，推送前查全部待推送历史 | [提交规范](skills/ld-codestyle-online/references/commit.md) |
+| 分支、审查与回执 | 主分支动手前先问，合并前交 Issue/PR 与审查，交付先说办好没有 | [分支流程](skills/ld-codestyle-online/references/branch-workflow.md) · [技术审查](skills/ld-codestyle-online/SKILL.md#合并请求的技术审查) |
 
 
 
@@ -232,13 +244,15 @@ flowchart TB
 
 ## 当前阶段与适用范围
 
-这是实用的日常协作技能，当前仍在持续实践。**从 0.5.0 起，适用范围按三层区分：**
+这是实用的日常协作技能，当前仍在持续实践。**从 0.5.0 起按层区分适用范围，0.6.1 把源码风格与 Unity/OOP 结构分开并补上协作流程一层：**
 
 | 层次 | 默认怎么用 | 不随它自动发生的事 |
 |---|---|---|
 | **提交身份** | 所有仓库均适用；公开/私有分别处理 | 不改全局 Git 身份、旧提交或账号绑定 |
 | **共享 Markdown 记忆** | 所有项目默认启用；明确排除才记本机黑名单 | 不搬私人记忆、不全仓铺模板、不扩大任务范围 |
-| **源码风格与 Unity/OOP 架构** | 按已采用约定、授权和语言/项目适配范围执行 | 不把 Base、Unity 目录或 Inspector 硬套其他技术栈 |
+| **源码风格** | LD/LastDreamTeam 一方仓库、项目声明采用、源码已有 LD 约定或用户要求时执行，不限 Unity | 不接管第三方、他人或未采用的项目 |
+| **Unity/OOP 结构** | Unity 工程或已采用该结构的项目 | 不把 Base、Unity 目录或 Inspector 硬套其他技术栈 |
+| **协作流程与写作** | 分支、两次合并请求与审查在项目无自有约定时作默认；Issue、首页与回执写法用于 AI 写给人看的产物 | 项目约定和用户当前决定优先，不新增推送或合并授权 |
 
 优先注意这几件事：
 
@@ -257,7 +271,7 @@ flowchart TB
 
 - **提交身份覆盖一切仓库**，与引擎、开发语言、项目规模和共享记忆开关无关。私有强制准确Bot/Agent身份；public默认简化且主人可以定制。
 - **共享Markdown记忆默认覆盖一切项目**。Unity、UE/Unreal、Cocos、Godot等重型游戏开发/生产工业引擎项目，只要当前宿主存在本技能就强制应用。Web/H5、Vue、Node.js、PHP、TypeScript、Python及无底层引擎项目也默认开启，采用明确排除的黑名单，不能因轻量或非Unity自行跳过。主人明确要求不使用共享记忆时，才在本机环境变量中按真实项目根记录排除；详见下方跨项目规则。
-- **其余源码风格与Unity/OOP规则独立判断**。已经采用LD开发约定的Unity项目应用相应治理；其他项目对源码架构、命名、注释、格式等按明确采用授权及适配范围执行。默认记忆与提交身份不等于自动采用所有源码规则，不要求制造Base接口、Unity目录、Inspector或无意义OOP层，也不自动启用所有区域的SQLite历史流程。
+- **其余源码风格与Unity/OOP规则独立判断**。LD/LastDreamTeam 一方仓库、项目声明采用、一方源码已有 LD 约定或用户明确要求时，注释、归属、格式、命名与插件保护按语言适配执行，不限 Unity；Base、MVVM、Inspector 等结构规则只在 Unity 或已采用该结构的项目执行。第三方、他人或未采用项目只适用前两层。默认记忆与提交身份不等于自动采用所有源码规则，不要求制造Base接口、Unity目录、Inspector或无意义OOP层，也不自动启用所有区域的SQLite历史流程。
 - 第三方插件、生成文件、序列化资产和现有公共契约有独立边界。技能不是改写它们的授权，也不能覆盖当前任务范围。插件优先项目侧扩展；确有必要的侵入改写须最小化、就地标记，并在插件目录外的必读入口登记清单，升级后按清单补回，见[插件纯净与必要改写](skills/ld-codestyle-online/references/contract.md#插件纯净与必要改写)。
 - 本次新写和改动的代码按工程格式配置与周边风格整理，保持原编码与换行，不全文件重排未改动代码；整体格式化单独提交，见[代码格式整理](skills/ld-codestyle-online/references/contract.md#代码格式整理)。
 - 原 `ld-codestyle-v6` 是首版的规范来源；在线版拥有自己的版本号。**同一任务只使用一份确定版本，不叠加旧版与在线版。**
@@ -340,6 +354,8 @@ Windows读取当前用户持久环境值优先，避免运行中宿主继承旧�
 **打扫另做，不是每次任务都做**：找出没按要求放的旧东西，保留有效内容、来源、链接和meta，搬回所属 README/Agentic；旧 Agentic.md 的有价值正文由 README 承接。搬时留一行“从哪搬到哪、谁搬的”（公开目标按隐私规则记录）；旧代码缺注释、旧脚本没按新规也归这次打扫。可以分几次，做不完记一句“还差哪些”，下次接着清。历史人类 Readme、人工改动与宿主私有记忆不擅动，不复制两份正文；见[完整规则与模板](skills/ld-codestyle-online/references/directory-context.md)。
 
 安装/更新技能不自动开扫；只读不搬。平时读取相关 README 及仍有效的旧入口，不因尚未打扫就忽略已有要求，也不把打扫摊到每次开发。
+
+（以下两段是 0.5.0 之前的历史记录，保留当时的身份写法供追溯；现行署名见“提交身份”一节，不要照抄。）
 
 本节原提案记录：2026-10-15（Asia/Shanghai）；按 [Issue #2](https://github.com/LastDreamTeam/LDAI_CodeStyleAgentSkill/issues/2) 新增作用域/布局、DEBUG与日期身份约定，并据用户补充明确既有文件必须迁移、README原职责保留及每份文件独立可读的头部说明，不仅README；继承 #1 的成熟度规则，随0.3.0统一发布。
 `##模型：列克星敦 + openai/gpt-6-astra | 补充目录共享记忆与用户流程回归`
@@ -471,9 +487,9 @@ LD语境区分**工具类Agent**（Codex、Cursor、IDE AI插件、DeepSeekHarne
 
 检查脚本不调用模型 API。“最新版”指官方 `main` 通道发布的技能版本，不表示每次使用强拉每一笔提交。完整安装、支持的更新后端、可用网络/权限和安全空档仍是前提；不覆盖本地改动、不绕原生审批、不安装后台任务、cron或服务。无关终端不会被远程更新。
 
-`health`无网络读取版本与健康状态，返回机器可读JSON并维护当前实例的 `health.json`。依赖方应调用CLI重新评估时间与实际磁盘版本，而不是永久缓存一个健康布尔值；可选择 `health --require-healthy --min-version 0.5.0` 或精确版本要求。健康输出是保险信号，不是加密认证，也没有替其他技能/插件自动安装推送门禁，字段与退出码见[维护与健康接口](skills/ld-codestyle-online/references/maintenance.md)。
+`health`无网络读取版本与健康状态，返回机器可读JSON并维护当前实例的 `health.json`。依赖方应调用CLI重新评估时间与实际磁盘版本，而不是永久缓存一个健康布尔值；可选择 `health --require-healthy --min-version "<依赖方要求的版本>"` 或精确版本要求。健康输出是保险信号，不是加密认证，也没有替其他技能/插件自动安装推送门禁，字段与退出码见[维护与健康接口](skills/ld-codestyle-online/references/maintenance.md)。
 
-旧配置的人类名、交互偏好和路径保留。已保存的 `auto_update=false` 无法可靠区分旧默认与主人明确拒绝，因此保留并标脏；恢复自动更新按下面参数命令显式开启，不能静默洗掉脏标记。旧 `interval_days` 值保留作兼容信息，0.5.0 的实际联网检查周期固定为1天。
+旧配置的人类名、交互偏好和路径保留。已保存的 `auto_update=false` 无法可靠区分旧默认与主人明确拒绝，因此保留并标脏；恢复自动更新按下面参数命令显式开启，不能静默洗掉脏标记。旧 `interval_days` 值保留作兼容信息，自 0.5.0 起实际联网检查周期固定为1天。
 
 本地数据包括人类注释标记（默认 `LD`）、混合 Commit 的人类显示名（默认 `主人`）、兼容周期值、自动更新开关（新安装默认开启）、尝试/成功时间及健康状态。数据位置选择顺序：
 
@@ -555,7 +571,7 @@ python -B scripts/maintain.py config --idle-after-minutes 15
 
 开发从[分支与合并流程](skills/ld-codestyle-online/references/branch-workflow.md)开始。提交 PR 前可查[技术审查依据](skills/ld-codestyle-online/SKILL.md#合并请求的技术审查)。报告问题或整理首页时见[Issue 与根 README](skills/ld-codestyle-online/references/public-writing.md)，给用户交付时见[最终回执](skills/ld-codestyle-online/references/interaction.md#给人类的最终回执)。
 
-技能名固定为 `ld-codestyle-online`，当前版本 **0.6.0** 增加分支、审查与面向人类的文档约定，延续 0.5.1 的推送边界和求助规则，见 [发布包](https://github.com/LastDreamTeam/LDAI_CodeStyleAgentSkill/releases) 与 [CHANGELOG.md](CHANGELOG.md)。此前tag与附件保持不变，不改技能名来分发。配置schema仍为1，原地保留偏好；新安装自动更新默认开启，已有关闭值保留并标脏，运行中任务不静默切规则。
+技能名固定为 `ld-codestyle-online`，当前版本 **0.6.1** 写清 LD 一方项目默认采用源码风格的判定，并让分支与审查流程让位于项目约定和当前指令；0.6.0 的分支、审查与面向人类的文档约定和 0.5.1 的推送边界、求助规则继续有效，见 [发布包](https://github.com/LastDreamTeam/LDAI_CodeStyleAgentSkill/releases) 与 [CHANGELOG.md](CHANGELOG.md)。此前tag与附件保持不变，不改技能名来分发。配置schema仍为1，原地保留偏好；新安装自动更新默认开启，已有关闭值保留并标脏，运行中任务不静默切规则。
 
 Release ZIP用于允许文件包安装的宿主，不绕过原生管理器审批，也不具有Git fast-forward更新能力；现有Git/Hermes安装仍走原管理方式，不用ZIP覆盖。升级前内容可从 [legacy备份分支](https://github.com/LastDreamTeam/LDAI_CodeStyleAgentSkill/tree/legacy/main-20261016-6aa86d5) 核对。
 

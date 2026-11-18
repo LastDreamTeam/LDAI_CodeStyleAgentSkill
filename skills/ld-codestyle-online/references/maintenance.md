@@ -36,7 +36,7 @@ python -B scripts/maintain.py health
 
 ```sh
 python -B scripts/maintain.py health --require-healthy
-python -B scripts/maintain.py health --min-version 0.5.0
+python -B scripts/maintain.py health --min-version "<依赖方要求的版本，如 0.6.1>"
 python -B scripts/maintain.py health --require-version 0.5.0 --require-healthy
 ```
 

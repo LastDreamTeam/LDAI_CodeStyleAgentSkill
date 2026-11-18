@@ -4,7 +4,7 @@
 
 ## 流程
 
-1. 新建 Issue 先查重，按[项目优先级、类型和标题约定](skills/ld-codestyle-online/references/public-writing.md#新建-issue)说明问题和期望。开发与提请合并按[分支与两阶段流程](skills/ld-codestyle-online/references/branch-workflow.md)办理。较大架构/许可调整先讨论，不以技能更新扩大用户授权。
+1. 新建 Issue 先查重，按[项目优先级、类型和标题约定](skills/ld-codestyle-online/references/public-writing.md#新建-issue)说明问题和期望。开发与提请合并按[分支与两次合并请求](skills/ld-codestyle-online/references/branch-workflow.md)办理；本仓 `main` 是在线发布通道，开发一律走分支与 PR。较大架构/许可调整先讨论，不以技能更新扩大用户授权。
 2. 在独立分支修改适用文件。按[默认推送边界](skills/ld-codestyle-online/references/commit.md#默认提交与推送边界完整复现更新)保全干净检出可复现更新的必要依赖，排除非必要调试副产物及无业务语义的序列化噪声，不删除本地人工/其他任务资料；审查tracked/untracked/staged及全部待推送提交，不能只看最终diff。不提交本地数据目录、凭据、主机路径、聊天或私有工程源码。
 3. 新行为先写能失败的测试，再实现；运行 `python -B -m unittest discover -s tests -v`。
 4. AI 提交按[目标可见性与隐私规范](skills/ld-codestyle-online/references/commit.md)执行。本仓库为公开仓库，默认 `##模型：<Bot昵称或Agent具体模型名，不含推理强度> | <摘要>`，再用空行分隔问题、解决两节；主人可明确调整公开署名。提交与推送前检查并脱敏内容、全部待推送历史及元数据中的个人/企业隐私，公开默认不附内部框架、PC或推理档位。

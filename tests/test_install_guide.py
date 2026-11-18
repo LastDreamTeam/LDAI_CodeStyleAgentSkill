@@ -14,8 +14,26 @@ GUIDE = ROOT / 'skills/install.md'
 NAME = 'ld-codestyle-online'
 
 
+def symlink_unavailable_reason():
+    """OpenAI: 探测当前用户能否创建目录符号链接，返回不可用原因或 None。"""
+    with tempfile.TemporaryDirectory() as tmp:
+        try:
+            # OpenAI: Windows 缺少 SeCreateSymbolicLinkPrivilege 时抛 WinError 1314；只记录原因，不提权或改系统设置。
+            (Path(tmp) / 'probe').symlink_to(Path(tmp), target_is_directory=True)
+        except (OSError, NotImplementedError) as exc:
+            return f'Directory symlink unavailable for this user: {type(exc).__name__} {getattr(exc, "winerror", "")}'
+    return None
+
+
+SYMLINK_SKIP = symlink_unavailable_reason()
+
+
+@unittest.skipIf(SYMLINK_SKIP, SYMLINK_SKIP or '')
 class InstallGuideTests(unittest.TestCase):
+    """OpenAI: 执行安装文档中的链接示例；无链接权限的环境如实跳过，由 CI 的 Windows/POSIX runner 覆盖。"""
+
     def link_example(self):
+        """OpenAI: 从安装文档提取可执行的链接脚本，缺失时说明文档入口损坏。"""
         self.assertTrue(GUIDE.is_file(), 'The Agent-readable installation entry must exist')
         match = re.search(r'<!-- ld-link-example:start -->\s*```python\n(.*?)\n```',
                           GUIDE.read_text(encoding='utf-8'), re.S)
@@ -23,6 +41,7 @@ class InstallGuideTests(unittest.TestCase):
         return match.group(1)
 
     def invoke(self, code, source, target):
+        """OpenAI: 以独立解释器运行链接脚本，按 UTF-8 捕获输出避免本机代码页解码失败。"""
         return subprocess.run([sys.executable, '-B', '-c', code, str(source), str(target)],
                               capture_output=True, text=True, encoding='utf-8', timeout=10)
 
@@ -47,6 +66,7 @@ class InstallGuideTests(unittest.TestCase):
             self.assertTrue(config['auto_update'])
 
     def test_same_install_is_reused_without_overwrite(self):
+        """OpenAI: 重复执行指向同一源的链接只报告 present，不覆盖已有安装。"""
         code = self.link_example()
         with tempfile.TemporaryDirectory() as tmp:
             source = ROOT / 'skills' / NAME
@@ -58,6 +78,7 @@ class InstallGuideTests(unittest.TestCase):
             self.assertEqual(target.resolve(), source.resolve())
 
     def test_existing_directory_and_dangling_link_are_preserved(self):
+        """OpenAI: 已有目录与悬空链接都保留原状并报错，保护人工内容。"""
         code = self.link_example()
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

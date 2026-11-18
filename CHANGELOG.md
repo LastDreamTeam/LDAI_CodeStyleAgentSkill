@@ -1,10 +1,21 @@
 # Changelog
 
+## 0.6.1 — 2026-11-19
+
+复核全部历史 Issue 与 0.6.0 交接包后的兼容补丁，配置与健康 schema 不变，原地升级保留偏好。
+
+- **源码风格的采用判定写清**：LD/LastDreamTeam 一方仓库、项目声明采用、一方源码已有 `LD:`/`I<类型>Base`/`.Agentic` 等约定或用户明确要求，任一成立即执行强制注释、注释归属、格式整理、命名与插件保护，不限 Unity；Base、MVVM、Inspector 等结构规则仍只在 Unity 或已采用该结构的项目执行。此前“已采用LD约定”没有判定信号，非 Unity 一方项目可能整套跳过。
+- **协作流程归层**：分支询问、两次合并请求与技术审查是项目没有自有约定时的默认；Issue、首页与回执写法用于 AI 写给人看的产物。都让位于项目约定和用户当前决定，不新增推送或合并授权。
+- **分支流程去冲突**：只在开始新任务、遇到无关或来源不明的改动时询问去向，同任务续做不重问；发布分支上“先推送”仍受合并审查约束；“第一次/第二次”按材料状态而非请求次数，材料与授权齐全时不为凑次数拒绝；无 Issue/PR 机制的项目用任务记录代替；写明 AI 开分支时作者段的取法和合并后清理分支的条件。
+- **审查分歧不再写入上游公开议题**：先记在本项目 PR/Issue 或区域记忆，可通用的缺口经脱敏与授权后再到本仓新开 Issue。
+- 技能 description 补齐写代码、审查、分支、Issue、README 与回执等触发场景；写清同一 `///` 块的提供方标记口径；插件改写清单正文放项目侧 README/Agentic，`AGENTS.md` 只指路；README 模板把 SQLite 历史改为可选；技能内文档不再链接到安装单元之外的相对路径；版本门禁示例改为占位。
+- 本仓：根 README 增加核心约定一览、四层适用表并更新英文入口；`Agentic/USER.md` 补记 #24、#25、#27、#28、#29 的用户要求；Windows 无符号链接权限时安装链接测试按平台跳过并说明原因，不再报为失败。
+
 ## 0.6.0 — 2026-11-18
 
 - [#25](https://github.com/LastDreamTeam/LDAI_CodeStyleAgentSkill/issues/25) 和 [#27](https://github.com/LastDreamTeam/LDAI_CodeStyleAgentSkill/issues/27) 将分支选择、两阶段合并流程和按影响范围独立审查接起来。分支类型前缀留待用户决定，技术审查引用原有契约。
 - [#24](https://github.com/LastDreamTeam/LDAI_CodeStyleAgentSkill/issues/24)、[#28](https://github.com/LastDreamTeam/LDAI_CodeStyleAgentSkill/issues/28) 和 [#29](https://github.com/LastDreamTeam/LDAI_CodeStyleAgentSkill/issues/29) 补齐问题标题与标签、面向人类的回执、项目首页和图片核查，增加本仓英文阅读入口。
-- [#20 跨仓接手记录](Agentic/DEBUG.md) 记录真实业务验证的版本、操作与边界。共享记忆范围、旧资料保护、工具 CLI 和现有配置格式继续适用。
+- [#20](https://github.com/LastDreamTeam/LDAI_CodeStyleAgentSkill/issues/20)（[跨仓接手记录](Agentic/DEBUG.md#go-服务端与-windows-桌面客户端接手试点20)）记录真实业务验证的版本、操作与边界。共享记忆范围、旧资料保护、工具 CLI 和现有配置格式继续适用。
 
 ## 0.5.1 — 2026-11-11
 

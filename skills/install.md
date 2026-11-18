@@ -111,7 +111,7 @@ python -B "<SKILL_DIR>/scripts/maintain.py" check
 
 - 新安装默认人类注释标识 `LD`、混合提交显示名 `主人`、有效检查间隔 `1` 天、**`auto_update=true`（默认自动更新）**。已有偏好不重置：保存的`false`保留且标脏，不能猜它只是旧默认；主人要求恢复时再开启。参数含义和唯一修改命令入口见[README 参数设置](../README.md#参数设置)。
 - `--idle` 是 Agent 确认没有任务正在使用该安装；已运行的安装若不能确认空闲，只运行 `check` 并将更新列为延后，不虚报空闲。
-- 新获取的最新安装首次 `sync` 通常为 `up_to_date`；若上游已发新版，默认在安全空档更新，无逐次询问。再次 `check` 应为 `not_due`，`--force`也不能突破滚动24小时联网检查上限。复用安装须回读最近成功时间、错误、当前磁盘版本和更新来源；关闭更新、网络失败或 `deferred_until_idle` 均不能报告健康或已更新。再运行 `health` 验证机器可读版本/脏标记，依赖方可用 `health --require-healthy --min-version 0.5.0` 作相关推送的前置检查。
+- 新获取的最新安装首次 `sync` 通常为 `up_to_date`；若上游已发新版，默认在安全空档更新，无逐次询问。再次 `check` 应为 `not_due`，`--force`也不能突破滚动24小时联网检查上限。复用安装须回读最近成功时间、错误、当前磁盘版本和更新来源；关闭更新、网络失败或 `deferred_until_idle` 均不能报告健康或已更新。再运行 `health` 验证机器可读版本/脏标记，依赖方可用 `health --require-healthy --min-version "<依赖方要求的版本>"` 作相关推送的前置检查。
 - 回读 `show` 输出的实际 `data_dir`、配置、`state.json` 及磁盘 `assets/version.json`。Git 安装还要回读 HEAD 和来源；Hermes 安装核原生登记，不只看 CLI 退出码。
 - 数据目录优先使用终端已分配且调用时稳定可用的根；默认能识别 Hermes 时放在 profile 外部数据区，其他情况使用技能内已忽略的 `.ld-codestyle-data`。如果使用 `--data-root`，**每次维护必须传同一根**并在宿主已有调用配置中绑定；无法可靠绑定就使用默认路径，不能只在安装那次传参造成后续偏好“丢失”。不设置全机公共偏好覆盖所有 Agent。
 

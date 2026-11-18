@@ -45,7 +45,7 @@
 
 ## 工具入口与真实边界
 
-Python 3.10+标准库工具：`scripts/memory_history.py`。每个命令必须显式指定实际 `--area <路径/Agentic>`。初始化须显式给真实README相对路径、scope、说明和public/private；查询不创建缺失数据库。完整命令和可调参数集中在[README](../../../README.md#区域历史与有限记忆)。
+Python 3.10+标准库工具：`scripts/memory_history.py`。每个命令必须显式指定实际 `--area <路径/Agentic>`。初始化须显式给真实README相对路径、scope、说明和public/private；查询不创建缺失数据库。完整命令和可调参数集中在[README](https://github.com/LastDreamTeam/LDAI_CodeStyleAgentSkill#区域历史与有限记忆)。
 
 - `init`建立库；`add`写精选JSON，`get <ID>`完整读回。
 - `search [词]`按解码后的实际字段值做字面子串检索（含中文、双引号、反斜杠和换行），不搜索JSON键名/转义文本；可组合上述类型和日期筛选，命中后按ID稳定分页，返回有界索引、`has_more`和`next_offset`。查询先在同一只读事务流式核全部记录的hash及日期/类型投影，损坏报错而非伪报零命中；因此校验开销随精选记录数增长，不是向量搜索或FTS5，不承诺无限数据量性能。`get`才取全文。

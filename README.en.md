@@ -16,6 +16,6 @@ The [installation guide](skills/install.md) includes host-specific commands. Onc
 
 ## Scope and evidence
 
-Commit attribution applies across repositories. Shared Markdown memory is enabled by default unless the owner explicitly excludes a project. Unity and object-oriented architecture conventions apply only where adopted and appropriate. Teams retain their project-specific requirements and merge authority.
+Commit attribution applies across repositories. Shared Markdown memory is enabled by default unless the owner explicitly excludes a project. LD source style (function header docs, in-place rationale comments, provider-tagged AI comments, scoped formatting, plugin isolation) applies in LD/LastDreamTeam first-party repositories, in projects that declare adoption, and on explicit request, regardless of engine. Unity and object-oriented structure rules (paired `I<Type>Base` interfaces, `.Agentic` layers, Inspector tooltips) apply only where that structure is adopted. The branch, review, Issue, README and report conventions are defaults; a project's own rules and the user's current instruction take precedence, and they grant no extra push or merge authority.
 
 Find the latest package in [Releases](https://github.com/LastDreamTeam/LDAI_CodeStyleAgentSkill/releases), behavior changes in the [changelog](CHANGELOG.md), and repeatable checks and limitations in the [verification notes](Agentic/DEBUG.md). See [contributing](CONTRIBUTING.md) for the review process and [LICENSE](LICENSE) for the documentation and code licenses.
