@@ -29,6 +29,7 @@ metadata:
 ## 开工入口
 
 - 开始开发先按[分支与两次合并请求](references/branch-workflow.md)核当前分支与待处理改动。新建 Issue 或整理项目首页时，遵循[Issue 与根 README 写法](references/public-writing.md)，优先使用目标项目已有规则。
+- 收尾逐条复核本次任务覆盖的 Issue，含以前已修却漏关的单。确认完整完成后，在授权内关单并回读状态；分支候选或部分完成不算关单。见[Issue 收尾](references/branch-workflow.md#任务范围内的-issue-必须收尾)。
 
 - 读 [协作契约](references/contract.md)；读最近 `AGENTS.md`、模块说明、真实 Git 分支/HEAD/脏状态以及目标 Base/接口和活跃实现。按改动影响核真实入口、直接依赖与受影响调用者、装配/生命周期及验证入口；缺失上下文先定向补证据，不凭旧记忆、未搜到引用或编译缺包改写架构，也不为小修调查全仓。
 - 处理目标路径内的脚本或资产前，按[目录共享上下文](references/directory-context.md)从共同入口、上层适用约定到所属区域 `README.md`，按需读取 `Agentic/USER.md`、`Agentic/MEMORY.md` 和相关 `Agentic/DEBUG.md` 条目，再沿直接依赖补查；不全仓注入，也不能只读叶子而漏掉上层联动约束。检查相关旧记忆入口，核逻辑作用域，物理目录不代表知识范围或权限。
