@@ -142,11 +142,64 @@ def _persist_value(registry, value, snapshot):
         raise PersistenceUncertainError()
 
 
+
+_HEAVY_KINDS = frozenset(('unity', 'unreal', 'cocos', 'godot'))
+_SKIP_WALK = frozenset({
+    '.git', 'Library', 'node_modules', 'Temp', 'Intermediate', 'Saved',
+    'Binaries', '__pycache__', '.venv', 'DerivedDataCache', 'Build', 'Builds',
+})
+_MEMORY_NAMES = ('USER.md', 'MEMORY.md', 'DEBUG.md')
+
+
+def detect_project_kind(project_root):
+    """OpenAI: 用明确工程标记识别重型引擎；无法确认时返回 unknown，不猜测语言栈。"""
+    root = Path(project_root)
+    if (root / 'Assets').is_dir() and (root / 'ProjectSettings' / 'ProjectVersion.txt').is_file():
+        return 'unity'
+    if any(root.glob('*.uproject')):
+        return 'unreal'
+    if (root / 'project.godot').is_file():
+        return 'godot'
+    if (root / 'assets').is_dir() and (
+            (root / 'project.json').is_file()
+            or (root / 'cc.config.json').is_file()
+            or (root / 'settings' / 'services.json').is_file()):
+        return 'cocos'
+    return 'unknown'
+
+
+def has_existing_memory(project_root):
+    """OpenAI: 查找已有 Agentic 记忆文件；已有资料应继续维护，不管当前引擎默认。"""
+    root = Path(project_root)
+    if any((root / 'Agentic' / name).is_file() for name in _MEMORY_NAMES):
+        return True
+    for dirpath, dirnames, filenames in os.walk(root, followlinks=False):
+        base = os.path.basename(dirpath)
+        if base in _SKIP_WALK:
+            dirnames[:] = []
+            continue
+        dirnames[:] = [name for name in dirnames if name not in _SKIP_WALK]
+        if base == 'Agentic' and any(name in filenames for name in _MEMORY_NAMES):
+            return True
+    return False
+
+
+def memory_auto_maintain(project_root, excluded):
+    """OpenAI: 黑名单优先；否则重型引擎或已有记忆文件才默认自动维护。"""
+    if excluded:
+        return False
+    if detect_project_kind(project_root) in _HEAVY_KINDS:
+        return True
+    return has_existing_memory(project_root)
+
+
 def project_memory(command, project_root, *, owner_requested=False, persist_user=False,
                    environ=None, registry=None, windows=None, lock_directory=None):
     """OpenAI: 返回当前项目记忆状态及可选环境建议，只有显式 Windows 持久化才写系统。
 
-    enabled/excluded_roots 始终是已观察到的实际状态；desired_* 是主人要求的候选。
+    enabled 表示当前是否应自动创建/维护共享记忆：未被黑名单排除，且属于重型
+    引擎或已有记忆文件。excluded_roots 始终是已观察的排除列表；desired_* 是主人
+    要求的候选。显式文档采用或用户当次要求由调用方判定，不在本工具内猜测。
     默认变更不改进程环境或项目文件，Windows 写后读验成功才返回 persisted=true。
     environ/registry/windows/lock_directory 可注入隔离测试；持久变更在当前用户共享锁
     内重读、计算与写验，正常查询只读取本机单个环境变量，不写锁或项目资料。
@@ -175,7 +228,11 @@ def project_memory(command, project_root, *, owner_requested=False, persist_user
         with user_environment_lock(lock_directory) if persist_user and windows else nullcontext():
             state = _load_state(os.environ if environ is None else environ, registry)
             roots = state['roots']
-            result = {'status': 'ok', 'project_root': root, 'enabled': root not in roots,
+            kind = detect_project_kind(root)
+            existing = has_existing_memory(root)
+            result = {'status': 'ok', 'project_root': root,
+                      'enabled': memory_auto_maintain(root, root in roots),
+                      'project_kind': kind, 'existing_memory': existing,
                       'excluded_roots': list(roots), 'variable': VARIABLE,
                       'value': serialize_blacklist(roots), 'source': state['source'], 'persisted': False}
             if command == 'show':
@@ -186,12 +243,15 @@ def project_memory(command, project_root, *, owner_requested=False, persist_user
                 desired.append(root)
             elif command == 'include':
                 desired = [candidate for candidate in desired if candidate != root]
-            result.update(status='environment_update_required', desired_enabled=root not in desired,
+            result.update(status='environment_update_required',
+                          desired_enabled=memory_auto_maintain(root, root in desired),
                           desired_excluded_roots=desired, value=serialize_blacklist(desired))
             if persist_user and windows:
                 _persist_value(registry, result['value'], state['snapshot'])
                 write_verified = True
-                result.update(status='updated', enabled=root not in desired, excluded_roots=list(desired),
+                result.update(status='updated',
+                              enabled=memory_auto_maintain(root, root in desired),
+                              excluded_roots=list(desired),
                               source='user_environment', persisted=True)
             else:
                 # OpenAI: 给出候选不代表生效；非 Windows 由已有宿主入口落地，不改 shell profile。

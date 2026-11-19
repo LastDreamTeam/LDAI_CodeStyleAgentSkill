@@ -1,6 +1,6 @@
 # 提交、混合贡献与真实交付
 
-本页规定本次提交的身份、贡献和隐私边界，**覆盖一切仓库，与引擎、开发语言、项目规模、是否采用LD架构及共享记忆黑名单无关**。私有身份强制准确；public按默认简化身份或主人明确定制执行。当前用户修正优先；身份字段必须与真实执行者对应，生成器只检验声明与格式，不认证实际模型、推理设置、Bot 资料或提交权限。
+本页规定本次提交的身份、贡献和隐私边界，**覆盖一切仓库，与引擎、开发语言、项目规模、是否采用LD架构及共享记忆黑名单无关**。私有身份强制准确；公开默认首行只写摘要，不写 `##模型：` 身份段，主人可明确要求公开名称。当前用户修正优先；身份字段必须与真实执行者对应，生成器只检验声明与格式，不认证实际模型、推理设置、Bot 资料或提交权限。
 
 ## 默认提交与推送边界：完整复现更新
 
@@ -38,31 +38,31 @@
 
 commit 前确认实际推送目标，push 前再核托管平台当前可见性，包括 push URL、fork 与 PR base；不能仅凭仓库名、HTTPS 地址、能否匿名克隆或 `private=false` 推断公开（企业 `internal` 不等于 `public`）。多个目标只要有一个公开，就按公开规则准备。未知/查询失败不默认私有，不生成带身份的首行，不向未核目标推送；企业内部可见性先核其披露规则，未明确时暂停相关项。
 
-### 公开仓库：默认保留简短身份，用户可明确覆盖
+### 公开仓库：默认只留摘要，不写模型身份段
 
-公开默认 **Bot 只写本人昵称，Agent 只写精确完整型号，不带推理强度**。默认不附框架、容器、机器名或混合贡献的人类显示名。型号自己的供应商命名空间、版本、大小写和后缀保留；不能把 `GPT`、`Sol`、产品名或 `auto` 当完整型号。
-
-```text
-##模型：<精确完整型号或真实Bot昵称> | 补充公开提交隐私规则
-
-##问题：公开提交需要清楚的贡献身份，同时避免泄漏内部资料。
-
-##解决：采用公开默认身份，核对本次公开内容；填写真实验证和未验边界。
-```
-
-用户可对公开显示名作明确覆盖，包括完全省略身份。`--public-name` 表达用户指定的公开名称，`--omit-public-identity` 表达用户明确要求只留摘要，两者互斥；不能因为身份尚未核实就擅自选省略。省略后的三段仍用空行分隔：
+公开默认 **首行只写本次改动摘要**，不写 `##模型：` 身份段，也不附框架、容器、机器名、推理强度或混合贡献的人类显示名。生成器在 `--visibility public` 时不再因为缺少 bot 或 model 而失败。
 
 ```text
 补充公开提交隐私规则
 
-##问题：用户明确要求本次公开提交省略身份，并保护相关内部资料。
+##问题：公开提交需要清楚说明改动，同时避免泄漏内部资料。
 
-##解决：按要求只留具体摘要及问题、解决两节；记录真实验证和未验边界。
+##解决：公开默认只留摘要，核对本次公开内容；填写真实验证和未验边界。
+```
+
+用户可明确要求公开显示名。`--public-name` 表达用户指定的公开名称；`--omit-public-identity` 是公开默认（只留摘要）的显式别名。两者互斥。指定名称后的首行仍是 `##模型：<公开名称> | <摘要>`，问题与解决两节继续用空行分隔。
+
+```text
+##模型：<用户指定的公开名称> | 补充公开提交隐私规则
+
+##问题：用户明确要求本次公开提交使用指定显示名，并保护相关内部资料。
+
+##解决：按要求使用公开名称，核对本次公开内容；记录真实验证和未验边界。
 ```
 
 公开覆盖只适用于公开目标，**不能弱化私有 Bot/Agent 的必填身份要求**。生成器无法判断用户是否真的授权覆盖，调用方须保留准确依据。用户指定名称仍须为合法单行文本，不借覆盖伪造贡献或塞入敏感资料。
 
-公开 PR 的 merge/squash 消息及继承 Commit 规则的 README/MEMORY/USER/DEBUG 变更记录沿用同一公开选择：默认简短身份；有明确覆盖则遵从覆盖。变更记录仍保留日期、动作、条目标识、原因、验证及非敏感来源，不额外补记内部框架、推理强度或机器信息。混合贡献可用“人类既有约定 / 本次实现”等文字说明，不冒认贡献。必要的合法版权/许可署名保留；不自动改写历史或受保护人工注释。
+公开 PR 的 merge/squash 消息及继承 Commit 规则的 README/MEMORY/USER/DEBUG 变更记录沿用同一公开选择：默认不写模型身份段；有明确公开名称则遵从该名称。变更记录仍保留日期、动作、条目标识、原因、验证及非敏感来源，不额外补记内部框架、推理强度或机器信息。混合贡献可用“人类既有约定 / 本次实现”等文字说明，不冒认贡献。必要的合法版权/许可署名保留；不自动改写历史或受保护人工注释。
 
 ### 私有仓库：按真实角色与贡献生成首行
 
@@ -152,16 +152,17 @@ python -B scripts/maintain.py commit-header --visibility private --client "<真�
 # 私有 Bot：已核独立身份与资料，框架和昵称组合，不需要模型
 python -B scripts/maintain.py commit-header --visibility private --client "<真实框架或容器>" --bot "<本人昵称>" --named-bot --summary "<具体摘要>"
 
-# 公开 Agent / Bot 默认身份
-python -B scripts/maintain.py commit-header --visibility public --model "<精确完整型号>" --summary "<具体摘要>"
-python -B scripts/maintain.py commit-header --visibility public --bot "<本人昵称>" --named-bot --summary "<具体摘要>"
+# 公开默认：首行只写摘要，不需要模型或昵称
+python -B scripts/maintain.py commit-header --visibility public --summary "<具体摘要>"
 
-# 只在用户明确要求本次公开覆盖时，二选一
+# 用户明确要求公开名称时
 python -B scripts/maintain.py commit-header --visibility public --public-name "<用户指定公开名称>" --summary "<具体摘要>"
+
+# --omit-public-identity 是公开默认的显式别名
 python -B scripts/maintain.py commit-header --visibility public --omit-public-identity --summary "<具体摘要>"
 ```
 
-私有混合贡献追加 `--mixed-human`，必要时显式追加 `--pc "<已核主机名>"`。公有默认不需要推理档位；若型号输入混有末尾档位，按上文规则明确拆分或提供一致的 `--reasoning-effort`。`--public-name` 和省略开关不适用于私有，不能用来绕过缺失身份。
+私有混合贡献追加 `--mixed-human`，必要时显式追加 `--pc "<已核主机名>"`。公开默认不需要推理档位或内部身份字段。`--public-name` 和 `--omit-public-identity` 不适用于私有，不能用来绕过缺失的私有身份。
 
 [独立模块](../scripts/commit_identity.py) 可直接 import：`commit_header(config, model, bot, summary, *, mixed_human=False, client='', named_bot=False, computer_name=None, visibility=None, reasoning_effort=None, public_name=None, omit_public_identity=False, pc=None)` 返回首行字符串；`commit_result` 同签名返回 `header/identity/visibility`；`commit_identity` 接受 model、bot 和相应身份选项，返回身份字符串。三个函数都无文件、主机或 Git 副作用。
 
