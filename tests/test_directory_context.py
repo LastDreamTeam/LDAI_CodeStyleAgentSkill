@@ -141,7 +141,10 @@ class DirectoryContextTests(unittest.TestCase):
                          '历史修复', '发现与复现', '修复过程', '验证证据',
                          '防复发', '未完成', '修复中途', '废弃/放弃'):
             self.assertIn(required, template)
-        for path in (SKILL/'SKILL.md', SKILL/'references/contract.md'):
+        entry = (SKILL/'SKILL.md').read_text(encoding='utf-8')
+        self.assertIn('复发缺陷', entry)
+        self.assertIn('](references/directory-context.md#复发缺陷的修复经验闭环)', entry)
+        for path in (SKILL/'references/directory-context.md', SKILL/'references/contract.md'):
             text = path.read_text(encoding='utf-8')
             for required in ('复发缺陷', 'MEMORY', 'Git', '已验证修复后', '阶段性/番茄切片'):
                 self.assertIn(required, text)
@@ -235,14 +238,17 @@ class DirectoryContextTests(unittest.TestCase):
 
     def test_cleanup_authority_is_explicit_in_entry_spec_and_templates(self):
         """OpenAI: 确认入口、规范及各模板均限制清理权限与无损整合条件。"""
-        paths = [SKILL/'SKILL.md', SKILL/'references/directory-context.md',
+        entry = (SKILL/'SKILL.md').read_text(encoding='utf-8')
+        self.assertIn('](references/directory-context.md#去重整合与内容压缩的权限)', entry)
+        paths = [SKILL/'references/directory-context.md',
                  *(SKILL/f'templates/module-{kind}.md' for kind in ('memory', 'user', 'readme', 'debug'))]
         for path in paths:
             text = path.read_text(encoding='utf-8')
             with self.subTest(path=path.name):
                 for term in ('可核对的重复依据', '同一条目标识', '同一来源哈希', '无损整合', '内容压缩', '专门获授权', '审计/辅助模型'):
                     self.assertIn(term, text)
-        self.assertIn('直接忽略该整理并保留原文', (SKILL/'SKILL.md').read_text(encoding='utf-8'))
+        spec = paths[0].read_text(encoding='utf-8').split('## 去重、整合与内容压缩的权限', 1)[1]
+        self.assertIn('直接忽略这项整理，保持原文', spec.split('\n## ', 1)[0])
 
 
 if __name__ == '__main__':

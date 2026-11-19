@@ -75,7 +75,9 @@ class ScopeAdoptionContractTests(unittest.TestCase):
     def test_review_disagreements_stay_inside_the_project(self):
         """Anthropic: 私有项目的审查记录不得追加到上游公开议题。"""
         entry = read(SKILL / "SKILL.md")
-        review = entry.split("## 合并请求的技术审查", 1)[1].split("\n## ", 1)[0]
+        route = entry.split("## 合并请求的技术审查", 1)[1].split("\n## ", 1)[0]
+        self.assertIn("](references/pr-review.md)", route)
+        review = read(SKILL / "references/pr-review.md")
         # OpenAI: 对外追加保留 #27 的历史入口，分享条件须与原项目记录同时可见。
         for term in ("本项目的 PR/Issue", "脱敏", "获授权", "issues/27", "追加可公开", "原可见范围"):
             self.assertIn(term, review)

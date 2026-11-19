@@ -8,6 +8,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SKILL = ROOT / "skills" / "ld-codestyle-online"
 WORKFLOW = SKILL / "references" / "branch-workflow.md"
 REVIEW = "合并请求的技术审查"
+REVIEW_PAGE = SKILL / "references" / "pr-review.md"
 
 
 class BranchReviewContractTests(unittest.TestCase):
@@ -58,7 +59,7 @@ class BranchReviewContractTests(unittest.TestCase):
         self.assert_mentions(
             first, "不合并", "签出点", "最新推送", "全部提交", "中间", "最终 diff",
             "Issue", "问题和边界", "PR", "验证结果", "未覆盖", "兼容性",
-            "../SKILL.md#合并请求的技术审查",
+            "](pr-review.md)",
         )
         self.assert_mentions(second, "用户", "Issue", "PR", "审查记录", "补齐", "冲突", "合并")
         self.assert_mentions(after, "合并版本", "影响范围", "未验", "关闭", "遗留", "Issue", "PR")
@@ -66,7 +67,10 @@ class BranchReviewContractTests(unittest.TestCase):
     def test_review_points_to_the_original_criteria(self):
         """OpenAI: 各项技术判断可直接回到原章节，审查入口独立于开发步骤。"""
         skill = SKILL / "SKILL.md"
-        review = self.section(skill, REVIEW)
+        route = self.section(skill, REVIEW)
+        self.assertIn("](references/pr-review.md)", route)
+        review = REVIEW_PAGE.read_text(encoding="utf-8")
+        self.assertEqual(review.splitlines()[0], f"# {REVIEW}")
         content = skill.read_text(encoding="utf-8")
         self.assertLess(content.index(f"\n## {REVIEW}\n"), content.index("\n## 流程与验收\n"))
         for target in (
@@ -76,11 +80,11 @@ class BranchReviewContractTests(unittest.TestCase):
             "commit.md#格式与工具",
         ):
             with self.subTest(target=target):
-                self.assertIn(f"](references/{target})", review)
+                self.assertIn(f"]({target})", review)
 
     def test_review_scope_authority_and_actual_verification(self):
         """OpenAI: 防止自审放行、安装状态免责、扩成全仓审计或误把结论当授权。"""
-        review = self.section(SKILL / "SKILL.md", REVIEW)
+        review = REVIEW_PAGE.read_text(encoding="utf-8")
         self.assert_mentions(
             review, "人类当前明确指令", "AGENTS.md", "区域 `README.md`", "本技能默认",
             "未安装", "直接依赖", "受影响调用者", "无关问题", "配对接口", "架构负责人",
@@ -96,6 +100,25 @@ class BranchReviewContractTests(unittest.TestCase):
             with self.subTest(entry=path.name):
                 self.assert_mentions(content, "references/branch-workflow.md", "SKILL.md#合并请求的技术审查")
         self.assertIn("](references/branch-workflow.md)", (SKILL / "SKILL.md").read_text(encoding="utf-8"))
+
+    def test_daily_entry_loads_pr_criteria_only_for_pr_reviews(self):
+        """OpenAI: 对安装入口的字符开销、日常编码路由和 PR 专用正文分别验收。"""
+        skill = SKILL / "SKILL.md"
+        entry = skill.read_text(encoding="utf-8")
+        # OpenAI: 0.7.0 的入口约 7,500 个字符；新索引保留维护余量，避免细则再次整页内联。
+        self.assertLessEqual(len(entry), 4500)
+        route = self.section(skill, "按需阅读")
+        pr_rows = [line for line in route.splitlines() if "pr-review.md" in line]
+        self.assertEqual(len(pr_rows), 1)
+        self.assertIn("对 PR 做技术审查", pr_rows[0].split("|")[1])
+        coding_row = next(line for line in route.splitlines() if "编写或审查一方源码" in line)
+        self.assert_mentions(coding_row, "comments.md", "contract.md")
+        self.assertNotIn("pr-review.md", coding_row)
+        review = REVIEW_PAGE.read_text(encoding="utf-8")
+        for criterion in ("确定影响范围", "核对适用的原判据", "亲自运行项目已有且适用的门禁",
+                          "给出技术结论和缺口清单"):
+            self.assertNotIn(criterion, entry)
+            self.assertIn(criterion, review)
 
 
 if __name__ == "__main__":

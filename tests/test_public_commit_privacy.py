@@ -20,6 +20,28 @@ SPEC.loader.exec_module(identity)
 
 
 class PublicCommitPrivacyTests(unittest.TestCase):
+    def test_local_account_selection_in_entry_and_remote_workflow(self):
+        """OpenAI: 验证入口能找到本地作者、远端身份及连接器回退规则。"""
+        skill = ROOT / 'skills/ld-codestyle-online'
+        entry = (skill / 'SKILL.md').read_text(encoding='utf-8')
+        workflow = (skill / 'references/branch-workflow.md').read_text(encoding='utf-8')
+        spec = (skill / 'references/commit.md').read_text(encoding='utf-8')
+        account = spec.split('### 本地账号优先\n', 1)[1].split('\n### ', 1)[0]
+        for source in (entry, account):
+            for term in ('Codex、Cursor、DSH', '只有本地确实缺少账号且用户未禁用连接器'):
+                self.assertIn(term, source)
+        for source in (entry, workflow):
+            self.assertIn('commit.md#本地账号优先)', source)
+        for term in ('Git 作者、提交者和邮箱', 'Git Credential Manager', 'SSH 账号',
+                     '仅凭 `gh auth status` 未登录不能改用连接器', '同一本地账号的 API 登录',
+                     '不能把权限不足当作缺少账号', '不能切换连接器绕过限制',
+                     'LastDream 本人已确认使用此默认', '一次指定不改长期偏好',
+                     '才在已有的项目偏好或用户设置中为该主人记住例外'):
+            with self.subTest(term=term):
+                self.assertIn(term, account)
+        for term in ('本地是私人邮箱且没有公开授权', '已核实的 GitHub noreply 地址'):
+            self.assertIn(term, spec)
+
     def invoke(self, data, *args):
         """OpenAI: 在指定临时数据根运行真实 CLI，不替调用方补任何身份信息。"""
         return subprocess.run([sys.executable, '-B', str(SCRIPT), '--data-root', str(data),

@@ -22,6 +22,11 @@ class FatalMemoryExceptionTests(unittest.TestCase):
             # OpenAI: 模板必须单独说明优先级，不能只在链接目标补例外。
             visible = text.split('\n## ', 1)[0] if path.parent.name == 'templates' else text
             with self.subTest(path=path.relative_to(ROOT).as_posix()):
+                if path == SKILL / 'SKILL.md':
+                    for term in ('致命级', '优先', '必读处', '触发条件', '证据',
+                                 '](references/directory-context.md#记在哪里)'):
+                        self.assertIn(term, visible)
+                    visible = (SKILL / 'references/directory-context.md').read_text(encoding='utf-8')
                 for term in ('出事那块目录自己的 README/Agentic', '致命级', '优先',
                              '凡是动这块东西的人都得先看', 'XR 那套文件里最外面的那一份',
                              '不是项目根', '死机级', '触发条件', '一手证据', '版本/提交'):

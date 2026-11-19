@@ -1,14 +1,35 @@
 # LDAI CodeStyle Agent Skill
 
-**让编程 Agent 按 LD 的习惯写代码。人来定接口、设计和体验，Agent 完成实现，并交付人能看懂、能验证、能接手的代码。**
+LastDream / LastDreamTeam 的编程 Agent 协作规范。维护者通过接口和模块 README 留下设计意图，Agent 按项目现有结构实现改动，验证受影响的流程，把下一位接手者需要的信息写回项目。
 
-技能名：`ld-codestyle-online` · 当前版本：**0.7.0** · 形式：**规范 + 模板 + Python 辅助工具**
+**源码版本 0.7.1** · [最新 Release 与下载](https://github.com/LastDreamTeam/LDAI_CodeStyleAgentSkill/releases/latest) · [更新记录](CHANGELOG.md) · [English](README.en.md)
 
-[核心约定](#核心约定一览) · [看使用前后](#使用前后会有什么不同) · [安装](#安装) · [日常用法](#日常怎么用) · [适用范围](#当前阶段与适用范围) · [详细手册](#详细手册) · [English](README.en.md)
+[![main 分支的技能验证](https://github.com/LastDreamTeam/LDAI_CodeStyleAgentSkill/actions/workflows/validate.yml/badge.svg?branch=main)](https://github.com/LastDreamTeam/LDAI_CodeStyleAgentSkill/actions/workflows/validate.yml?query=branch%3Amain)
 
-在 LD 的 Go 项目里修函数，用 Go 注释写清改动，并沿用现有命名。在采用 LD 结构的 Unity 模块里加功能，先核配对接口与已装配的具体实现。这两类项目共享同一套交接习惯。
+## 安装
 
-第一次使用可把[安装说明](skills/install.md)交给当前 Agent。接手本仓时，从这里进入[用户要求](Agentic/USER.md)、[已核机制](Agentic/MEMORY.md)和[回归步骤](Agentic/DEBUG.md)。这三份是本仓规范、工具与测试的持久资料，按当前授权和证据维护，保留有效正文和来源。
+### 一句话交给你的 Agent
+
+```text
+请为当前宿主安装完整的 ld-codestyle-online，验证宿主能发现技能并报告已装版本。安装说明见 https://github.com/LastDreamTeam/LDAI_CodeStyleAgentSkill/blob/main/skills/install.md
+```
+
+安装需要支持技能的 Agent 宿主。辅助工具使用 Python 3.10 或更高版本，Git 安装方式还需要本机 Git。[分宿主安装步骤](skills/install.md) · [纯文本安装说明](https://raw.githubusercontent.com/LastDreamTeam/LDAI_CodeStyleAgentSkill/main/skills/install.md)
+
+<details>
+<summary>已有安装、宿主权限和仓库更名</summary>
+
+Hermes 使用原生管理器。支持本地技能的宿主可用独立 Git 克隆和目录链接接入。安装完整目录后，请在宿主内核对版本和发现结果。如原生管理器要求审批，按其正常流程处理。仓库更名前的安装可以原地升级并保留偏好。[更名迁移](skills/ld-codestyle-online/references/maintenance.md#仓库更名兼容)
+
+</details>
+
+## 日常使用
+
+从模块 README 和[技能入口](skills/ld-codestyle-online/SKILL.md)开始，按当前任务打开参考页。写代码时查注释、项目记忆和适配的架构约定，提交或审查时再查对应流程。主人、成员或合作者参与的公开仓、轻量脚本和引擎项目都适用。[适用范围](#当前阶段与适用范围)
+
+**本地账号优先，默认开启。** 本地提交沿用仓库生效的 Git 作者和邮箱。推送、处理 PR 或 Issue 时，优先使用目标主机上已授权的本机账号。只有主人明确要求长期停用，才为该主人保留例外。单次指定账号只影响当次操作。[本地账号优先](skills/ld-codestyle-online/references/commit.md#本地账号优先)
+
+[源码与生命周期对照](#使用前后会有什么不同) · [模块交接示意](#模块交接图) · [日常任务示例](#日常怎么用) · [详细手册](#详细手册) · [本仓共享上下文](#本仓库的共享上下文入口)
 
 ### 核心约定一览
 
@@ -22,11 +43,7 @@
 | 可追溯提交 | 公开默认首行只写摘要，空行后写 `##问题：` / `##解决：`；私有首行写 `##模型：` 准确身份。推送前查全部待推送历史 | [提交规范](skills/ld-codestyle-online/references/commit.md) |
 | 分支、审查与回执 | 适用仓库在无自有约定时默认先问分支并分两次请求合并，与是否轻量无关。交付先说办好没有 | [分支流程](skills/ld-codestyle-online/references/branch-workflow.md) · [技术审查](skills/ld-codestyle-online/SKILL.md#合并请求的技术审查) |
 
-
-
-0.7.0 起，技能入口改为按需阅读：普通写代码任务不必先加载分支、契约、共享记忆和维护脚本，也不要把 `maintain.py sync --idle` 当作第一件事。公开仓库的提交默认不再写 `##模型：` 身份段。
-
-> 规范由 Agent 阅读并执行，脚本提供指定辅助能力。下方保留 0.5.1 已验证的合成代码，用来演示实际约束：图片是源码对照，不是业务工程截图或自动修复证明。图片通过公开代码的在线渲染链接展示；原代码可在各图下展开复制。
+下面的两幅源码对照图和模块交接图展示这些规则如何落到代码和项目文档。完整代码可在每幅源码图下展开。
 
 ## 使用前后会有什么不同
 
@@ -153,6 +170,8 @@ private void OnDisable()
 
 </details>
 
+<a id="模块交接图"></a>
+
 ### 4. 换会话、换 Agent：从聊天里找，变成从模块入口找
 
 ```mermaid
@@ -206,23 +225,6 @@ flowchart TB
 本页代码演示仅覆盖有限场景：真实交付仍要依次核语法、项目编译、最小运行入口和受影响的用户流程，并在推送或合并后对准确版本复核。缺设备、Editor 或权限时明确标未验。公开仓库默认首行只写摘要，私有仓库按完整身份要求执行；公开前仍须检查隐私及全部待推送历史。
 
 
-## 安装
-
-### 一句话交给你的 Agent
-
-复制这句话给你正在使用的 Agent，普通获取、接入和验证由它完成：
-
-```text
-请阅读以下安装说明，为你当前的 Agent 环境安装 ld-codestyle-online，并验证主动检查更新可用：https://github.com/LastDreamTeam/LDAI_CodeStyleAgentSkill/blob/main/skills/install.md
-```
-
-**[打开 Agent 安装说明](skills/install.md)** · [纯文本入口](https://raw.githubusercontent.com/LastDreamTeam/LDAI_CodeStyleAgentSkill/main/skills/install.md)
-
-仓库已从 `LastDreamTeam/LDCodeStyleAgentSkill` 更名；技能名仍为 `ld-codestyle-online`。新安装使用新地址，旧安装的原地升级与偏好保留见[更名迁移](skills/ld-codestyle-online/references/maintenance.md#仓库更名兼容)。不要求换安装目录，也不另装一个同名技能。
-
-文档要求 Agent 识别当前宿主和作用域，获取官方最新版、安装完整技能、验证宿主发现及主动检查；不会替同一电脑上的其他 Agent 一起安装。Hermes 使用原生管理器；允许本地技能的其他宿主可用独立 Git 克隆＋本地目录/链接接入。只扔一份 `SKILL.md` 不算完整安装，也不会因此获得可用更新后端。
-
-“一句话安装”是交互目标，不是绕过权限或兼容一切的承诺。需要有文件、终端和网络能力，且宿主允许该接入方式；审批/激活等确需人工的步骤由 Agent 明确报告。当前部分 Hermes 版本会以 CAUTION 拦截维护脚本，必须按平台正式审批，不能改走手工安装规避。各款 CLI/桌面端及 Windows/macOS 仍须各自实机验收。
 
 ## 日常怎么用
 
@@ -248,7 +250,7 @@ flowchart TB
 
 ## 当前阶段与适用范围
 
-这是实用的日常协作技能，当前仍在持续实践。**从 0.5.0 起按层区分适用范围，0.6.1 把源码风格与 Unity/OOP 结构分开并补上协作流程一层，0.7.0 改为按需加载，公开提交首行只写摘要、正文交代问题与解决办法，并明确这是组织内部规范：**
+同一套协作规则覆盖不同引擎和语言。先核仓库中的参与关系，再按项目采用的架构和当前任务选择相应规则。
 
 | 层次 | 默认怎么用 | 不随它自动发生的事 |
 |---|---|---|
@@ -432,7 +434,7 @@ Grok Bot、GPT Dot、Hermes Bot、DSH Bot是框架/容器示例，不证明任�
 
 公开默认首行只写 `<摘要>`，不写 `##模型：` 身份段；主人可明确要求 `--public-name`。`--omit-public-identity` 是该默认的显式别名。公开调用不再因为缺少昵称或模型而失败。私有仍强制完整分类身份，不能用公开覆盖选项绕过。摘要后空一行写 `##问题：`，说清问题和影响。再空一行写 `##解决：`，交代实际改动、理由和验证结果。例子见[提交规范](skills/ld-codestyle-online/references/commit.md)。
 
-公开默认下生成器返回空 `identity`。Git 作者与提交者沿用获准公开的真实显示名，不用空值、内部型号或昵称填充 Git 元数据。自有且获准使用的真实邮箱优先用于提交，例如Bot已配有的邮箱；没有则用获准仓库邮箱或平台noreply，**不照抄示例地址、不虚构邮箱、不把认证账户误当实际作者**。只设置当前进程或获准仓库局部字段，核`git var`有效值并回读实际commit，代提交保留原作者，不改全局配置、账号绑定或历史。生成器本身不执行Git。
+公开默认下生成器返回空 `identity`。本地提交沿用仓库生效的 Git 作者、提交者和邮箱，代提交保留原作者。公开仓库使用已获准公开的邮箱。本地邮箱未获准公开时，使用该账号已核实的 GitHub noreply 地址或用户指定的公开邮箱。提交前核对有效署名，提交后回读实际记录。[本地账号优先](skills/ld-codestyle-online/references/commit.md#本地账号优先)
 
 公开前仍须检查文件、元数据、PR与全部待推送历史中的个人/企业隐私及秘密；简化署名不是秘密扫描。公开默认不附内部框架、推理强度、PC或人类混合显示名，不转填到其他正文。删当前文件或加.gitignore不能清除历史秘密，发现则暂停受影响推送；真实凭据泄漏由有权方撤销/轮换，合法版权/许可来源保留。
 
@@ -575,9 +577,9 @@ python -B scripts/maintain.py config --idle-after-minutes 15
 
 开发从[分支与合并流程](skills/ld-codestyle-online/references/branch-workflow.md)开始。提交 PR 前可查[技术审查依据](skills/ld-codestyle-online/SKILL.md#合并请求的技术审查)。报告问题或整理首页时见[Issue 与根 README](skills/ld-codestyle-online/references/public-writing.md)，给用户交付时见[最终回执](skills/ld-codestyle-online/references/interaction.md#给人类的最终回执)。
 
-技能名固定为 `ld-codestyle-online`，当前版本 **0.7.0** 把入口改为按需阅读，公开提交默认首行只写摘要、正文说清问题和解决办法，并明确适用仓库须完整遵守记忆、提交、分支、注释与架构约定；0.6.1 的一方源码风格判定、0.6.0 的分支与面向人类的文档约定，以及 0.5.1 的推送边界、求助规则继续有效，见 [发布包](https://github.com/LastDreamTeam/LDAI_CodeStyleAgentSkill/releases) 与 [CHANGELOG.md](CHANGELOG.md)。此前tag与附件保持不变，不改技能名来分发。配置schema仍为1，原地保留偏好；新安装自动更新默认开启，但普通写代码任务不以维护脚本为第一件事。已有关闭值保留并标脏，运行中任务不静默切规则。
+0.7.1 新增本地账号优先规则。它沿用 0.7.0 的按需阅读入口、公开提交三段格式，以及适用仓库完整的记忆、分支、注释和架构约定。已安装的技能仍使用原名 `ld-codestyle-online`，旧配置继续保留。各版本的改动与发行包见[更新记录](CHANGELOG.md)和[历史 Release](https://github.com/LastDreamTeam/LDAI_CodeStyleAgentSkill/releases)。
 
-Release ZIP用于允许文件包安装的宿主，不绕过原生管理器审批，也不具有Git fast-forward更新能力；现有Git/Hermes安装仍走原管理方式，不用ZIP覆盖。升级前内容可从 [legacy备份分支](https://github.com/LastDreamTeam/LDAI_CodeStyleAgentSkill/tree/legacy/main-20261016-6aa86d5) 核对。
+Release ZIP 用于支持文件包安装的宿主。已有 Git 或 Hermes 安装沿原方式更新。需要核对升级前的内容时，可查看[历史快照](https://github.com/LastDreamTeam/LDAI_CodeStyleAgentSkill/tree/6aa86d58e5cbf9218ffa42e7c1bb388a4c60eb9d)。
 
 欢迎以 Issue 或 PR 分享实践、问题和改进。贡献者应说明适用工程、真实收益、兼容风险与验证；不以单个工程的临时做法直接替代通用规则。贡献流程与三段式提交要求见 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
