@@ -109,15 +109,15 @@ class ProjectMemoryTests(unittest.TestCase):
             version.write_text('m_EditorVersion: 2022.3.0f1\n', encoding='utf-8')
         return root
 
-    def test_default_show_leaves_light_projects_disabled_without_writing(self):
-        """OpenAI: 缺变量时轻量项目默认关闭；show 不创建项目资料或写注册表、进程环境。"""
+    def test_default_show_enables_light_projects_without_writing(self):
+        """OpenAI: 缺变量时轻量项目也默认启用；show 不创建项目资料或写注册表、进程环境。"""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             env, registry = {}, FakeRegistry()
             code, result = self.invoke(root, 'show', environ=env, registry=registry)
             self.assertEqual(code, 0)
             self.assertEqual(result['status'], 'ok')
-            self.assertFalse(result['enabled'])
+            self.assertTrue(result['enabled'])
             self.assertEqual(result['project_kind'], 'unknown')
             self.assertFalse(result['existing_memory'])
             self.assertFalse(result['persisted'])
@@ -130,7 +130,7 @@ class ProjectMemoryTests(unittest.TestCase):
             self.assertEqual(registry.writes, 0)
 
     def test_heavy_engine_and_existing_memory_enable_unless_excluded(self):
-        """OpenAI: Unity 标记或已有记忆文件默认启用；黑名单仍可关闭重型项目。"""
+        """OpenAI: Unity 标记或已有记忆文件仍默认启用；黑名单仍可关闭重型项目。"""
         with tempfile.TemporaryDirectory() as tmp:
             unity = self.mark_heavy(Path(tmp) / 'unity')
             env, registry = {}, FakeRegistry()

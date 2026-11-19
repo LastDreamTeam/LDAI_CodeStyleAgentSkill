@@ -18,9 +18,9 @@
 | 注释归属 | AI 的说明标实际提供方（如 `OpenAI:`），`LD:` 等人类标记只保护不冒写 | [注释归属](skills/ld-codestyle-online/references/comments.md#注释归属) |
 | 配对 Base 接口与 `.Agentic` | `I<类型>Base` 是人类控制面，Base 可迭代，AI 实现放可替换的 Agentic 层 | [协作契约](skills/ld-codestyle-online/references/contract.md#模块结构与控制边界) |
 | 只整理改动范围 | 跟随工程格式、保持编码与换行，不全文件重排，插件优先项目侧扩展 | [格式与插件](skills/ld-codestyle-online/references/contract.md#代码格式整理) |
-| 模块共享记忆 | 重型引擎项目默认启用；轻量项目默认关闭，除非已有文件、项目声明采用或用户要求。区域 README 做索引 | [目录共享上下文](skills/ld-codestyle-online/references/directory-context.md) |
+| 模块共享记忆 | 适用仓库默认启用，与引擎或语言无关；明确排除记本机黑名单。区域 README 做索引 | [目录共享上下文](skills/ld-codestyle-online/references/directory-context.md) |
 | 可追溯提交 | 公开默认首行只写摘要，空行后写 `##问题：` / `##解决：`；私有首行写 `##模型：` 准确身份。推送前查全部待推送历史 | [提交规范](skills/ld-codestyle-online/references/commit.md) |
-| 分支、审查与回执 | 重型引擎项目默认先问分支并分两次请求合并；轻量项目的主分支小修不必每次先问。交付先说办好没有 | [分支流程](skills/ld-codestyle-online/references/branch-workflow.md) · [技术审查](skills/ld-codestyle-online/SKILL.md#合并请求的技术审查) |
+| 分支、审查与回执 | 适用仓库在无自有约定时默认先问分支并分两次请求合并，与是否轻量无关。交付先说办好没有 | [分支流程](skills/ld-codestyle-online/references/branch-workflow.md) · [技术审查](skills/ld-codestyle-online/SKILL.md#合并请求的技术审查) |
 
 
 
@@ -248,15 +248,15 @@ flowchart TB
 
 ## 当前阶段与适用范围
 
-这是实用的日常协作技能，当前仍在持续实践。**从 0.5.0 起按层区分适用范围，0.6.1 把源码风格与 Unity/OOP 结构分开并补上协作流程一层，0.7.0 改为按需加载并收窄轻量项目的默认启用面：**
+这是实用的日常协作技能，当前仍在持续实践。**从 0.5.0 起按层区分适用范围，0.6.1 把源码风格与 Unity/OOP 结构分开并补上协作流程一层，0.7.0 改为按需加载，公开提交只留摘要，并明确这是组织内部规范：**
 
 | 层次 | 默认怎么用 | 不随它自动发生的事 |
 |---|---|---|
 | **提交身份** | 所有仓库均适用；公开/私有分别处理 | 不改全局 Git 身份、旧提交或账号绑定 |
-| **共享 Markdown 记忆** | 重型引擎项目默认启用；轻量项目默认关闭，除非已有文件、项目声明采用或用户要求。明确排除仍记本机黑名单 | 不搬私人记忆、不全仓铺模板、不扩大任务范围 |
+| **共享 Markdown 记忆** | 适用仓库默认启用，与引擎或语言无关。明确排除仍记本机黑名单；他人且非主人/成员/合作者的仓库不适用 | 不搬私人记忆、不全仓铺模板、不扩大任务范围 |
 | **源码风格** | LD/LastDreamTeam 的一方源码默认采用，覆盖各语言。其他项目按项目或用户明确采用的范围执行 | 工程原有命名、人工注释、第三方插件和生成文件保持各自的维护边界 |
 | **Unity/OOP 结构** | 已采用 LD 结构的模块按配对接口、Base 与具体实现分工。Inspector 和资产规则适用于相应 Unity 工程 | 其他技术栈沿用实际模块结构 |
-| **协作流程与写作** | 重型引擎项目在无自有约定时默认走分支询问与两次合并请求；轻量项目的主分支小修不必每次先问。Issue、首页与回执写法用于 AI 写给人看的产物 | 项目约定和用户当前决定优先，不新增推送或合并授权 |
+| **协作流程与写作** | 适用仓库在无自有约定时默认走分支询问与两次合并请求，与是否轻量无关。Issue、首页与回执写法用于 AI 写给人看的产物 | 项目约定和用户当前决定优先，不新增推送或合并授权 |
 
 优先注意这几件事：
 
@@ -274,7 +274,7 @@ flowchart TB
 **各项目按以下条件选择相应规则。**
 
 - **提交身份覆盖一切仓库**，与引擎、开发语言、项目规模和共享记忆开关无关。私有强制准确Bot/Agent身份；公开默认首行只写摘要，主人可明确要求公开名称。
-- **共享Markdown记忆对重型引擎默认启用，对轻量项目默认关闭。** Unity、UE/Unreal、Cocos、Godot等重型游戏开发/生产工业引擎项目，只要当前宿主存在本技能就默认应用。Web/H5、Vue、Node.js、PHP、TypeScript、Python及无底层引擎项目默认不启用，除非已有记忆文件、项目声明采用或用户明确要求。已有资料继续维护。主人明确要求不使用共享记忆时，才在本机环境变量中按真实项目根记录排除；详见下方跨项目规则。
+- **共享Markdown记忆在适用仓库默认启用，与引擎或语言无关。** 只要安装了本技能，并且正在处理我们作为主人、成员或合作者的仓库（含公开仓和 Web/H5、Vue、Node.js、PHP、TypeScript、Python、无引擎以及各类引擎项目），就默认应用。已有资料继续维护。他人仓库在我们既不是主人、成员也不是合作者时不适用。主人明确要求不使用共享记忆时，才在本机环境变量中按真实项目根记录排除；详见下方跨项目规则。
 - **源码风格与Unity/OOP规则独立判断**。已确认由 LD/LastDreamTeam 开发的项目按语言应用函数文档、注释归属、格式和命名保护。其他项目按用户或项目明确采用的区域执行。原有代码标记用于定位已采用区域。只有相应 Unity 工程使用 Inspector 与资产规则，配对 Base 和 MVVM 取决于项目的结构约定。需要精选 SQLite 历史的责任区另作声明。
 - 第三方插件、生成文件、序列化资产和现有公共契约有独立边界。技能不是改写它们的授权，也不能覆盖当前任务范围。插件优先项目侧扩展；确有必要的侵入改写须最小化、就地标记，并在插件目录外的必读入口登记清单，升级后按清单补回，见[插件纯净与必要改写](skills/ld-codestyle-online/references/contract.md#插件纯净与必要改写)。
 - 本次新写和改动的代码按工程格式配置与周边风格整理，保持原编码与换行，不全文件重排未改动代码；整体格式化单独提交，见[代码格式整理](skills/ld-codestyle-online/references/contract.md#代码格式整理)。
@@ -291,7 +291,7 @@ flowchart TB
 
 ## 跨项目共享Markdown记忆与项目黑名单
 
-重型引擎项目默认启用共享记忆；轻量或无引擎项目默认关闭，除非已有记忆文件、项目声明采用或用户明确要求。一方业务模块或责任区使用所属 `README.md` 声明范围、入口与同级关系，把 `MEMORY.md`、`USER.md`、`DEBUG.md` 等共享正文集中在相应 `Agentic/`。**物理放在Agentic，不意味着逻辑只管Agentic**；作用范围始终与README所声明区域同级。Unity的路径关系是参考，实际目录按当前引擎/语言映射，已有README职责与人工资料保持，不能硬套 `Assets/Core`。
+适用仓库默认启用共享记忆，与引擎或语言无关。一方业务模块或责任区使用所属 `README.md` 声明范围、入口与同级关系，把 `MEMORY.md`、`USER.md`、`DEBUG.md` 等共享正文集中在相应 `Agentic/`。**物理放在Agentic，不意味着逻辑只管Agentic**；作用范围始终与README所声明区域同级。Unity的路径关系是参考，实际目录按当前引擎/语言映射，已有README职责与人工资料保持，不能硬套 `Assets/Core`。
 
 | 项目类型 | 可采用的责任区示例（须以真实目录核实） |
 |---|---|
@@ -575,7 +575,7 @@ python -B scripts/maintain.py config --idle-after-minutes 15
 
 开发从[分支与合并流程](skills/ld-codestyle-online/references/branch-workflow.md)开始。提交 PR 前可查[技术审查依据](skills/ld-codestyle-online/SKILL.md#合并请求的技术审查)。报告问题或整理首页时见[Issue 与根 README](skills/ld-codestyle-online/references/public-writing.md)，给用户交付时见[最终回执](skills/ld-codestyle-online/references/interaction.md#给人类的最终回执)。
 
-技能名固定为 `ld-codestyle-online`，当前版本 **0.7.0** 把入口改为按需阅读，并调整公开提交与轻量项目共享记忆的默认值；0.6.1 的一方源码风格判定、0.6.0 的分支与面向人类的文档约定，以及 0.5.1 的推送边界、求助规则继续有效，见 [发布包](https://github.com/LastDreamTeam/LDAI_CodeStyleAgentSkill/releases) 与 [CHANGELOG.md](CHANGELOG.md)。此前tag与附件保持不变，不改技能名来分发。配置schema仍为1，原地保留偏好；新安装自动更新默认开启，但普通写代码任务不以维护脚本为第一件事。已有关闭值保留并标脏，运行中任务不静默切规则。
+技能名固定为 `ld-codestyle-online`，当前版本 **0.7.0** 把入口改为按需阅读，公开提交默认只留摘要，并明确适用仓库须完整遵守记忆、提交、分支、注释与架构约定；0.6.1 的一方源码风格判定、0.6.0 的分支与面向人类的文档约定，以及 0.5.1 的推送边界、求助规则继续有效，见 [发布包](https://github.com/LastDreamTeam/LDAI_CodeStyleAgentSkill/releases) 与 [CHANGELOG.md](CHANGELOG.md)。此前tag与附件保持不变，不改技能名来分发。配置schema仍为1，原地保留偏好；新安装自动更新默认开启，但普通写代码任务不以维护脚本为第一件事。已有关闭值保留并标脏，运行中任务不静默切规则。
 
 Release ZIP用于允许文件包安装的宿主，不绕过原生管理器审批，也不具有Git fast-forward更新能力；现有Git/Hermes安装仍走原管理方式，不用ZIP覆盖。升级前内容可从 [legacy备份分支](https://github.com/LastDreamTeam/LDAI_CodeStyleAgentSkill/tree/legacy/main-20261016-6aa86d5) 核对。
 
