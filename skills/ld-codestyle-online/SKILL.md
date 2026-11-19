@@ -37,9 +37,11 @@ metadata:
 | 项目确实是 Unity（同时有 `Assets/` 和 `ProjectSettings/ProjectVersion.txt`） | [协作契约](references/contract.md) 中的 Unity、Inspector、资产与 OOP 部分。不要把 `I*Base`、画面验收或场景/预制件规则套到普通非 Unity 脚本上 |
 | 项目确实是 UE、Cocos、Godot 或同类引擎 | [跨项目记忆与黑名单](references/memory-scope.md) 里对应的路径映射，以及该引擎已采用的结构约定 |
 | 适用仓库的编码任务，或项目已有 `Agentic/USER.md`、`MEMORY.md`、`DEBUG.md` | [记忆范围](references/memory-scope.md)、[目录共享上下文](references/directory-context.md)、需要时再读 [区域历史](references/memory-history.md)。每份文件头部须自足说明用途与边界 |
-| 任务实际涉及分支、PR 或合并，或重型默认流程适用 | [分支与两次合并请求](references/branch-workflow.md) |
+| 任务实际涉及分支、PR、合并，或收尾任务范围内的 Issue | [分支与两次合并请求](references/branch-workflow.md)，含[Issue 收尾](references/branch-workflow.md#任务范围内的-issue-必须收尾) |
 | 正在写 Issue 或项目根 README | [Issue 与根 README](references/public-writing.md) |
-| 正在向人询问、写回执，或推送前无法安全决策 | [交互约定](references/interaction.md)，含[推送前求助](references/interaction.md#推送前无法安全决策时的求助) |
+| 正在向人询问、写回执，或推送前无法安全决策 | [交互约定](references/interaction.md)，含[最终回执](references/interaction.md#给人类的最终回执)和[推送前求助](references/interaction.md#推送前无法安全决策时的求助) |
+| 占用真实前台桌面或使用 Computer Use | [前台桌面操作用完立即释放](references/interaction.md#前台桌面操作用完立即释放) |
+| 创建验收页、脚本、截图、日志或临时构建 | [工作准备与验收文件](references/contract.md#工作准备与验收文件) |
 | 用户要求检查或更新本技能，或这是专门的维护回合 | [安装与维护](references/maintenance.md) |
 
 `auto_update=true` 可以仍是配置默认，但普通写代码、审查或提交任务**不要以** `python -B scripts/maintain.py sync --idle` **作为第一件事**。维护命令只在维护回合或用户明确要求检查、更新时运行。
@@ -54,6 +56,8 @@ metadata:
 - 共享记忆被黑名单排除，或不属于适用仓库时，不要主动建立 `Agentic/USER.md`、`MEMORY.md` 或 `DEBUG.md`。已有文件按原可见范围继续维护。
 - 普通 Agent 仅在有可核对的重复依据时，才剔除明显重复或做无损整合：同一条目标识、同一来源哈希，或当前摘要中已逐字重复的同一事实。依据不清、不能确定信息等价或有歧义时，直接忽略该整理并保留原文。**内容压缩**通常仅由专门获授权允许的审计/辅助模型执行，不能借去重删掉独立信息。已采用[区域历史](references/memory-history.md)的区域，授权区域维护者可在精选原文入库、读回核验和旧摘要保全后压缩该区三份摘要；README/人类资料及未采用区域不适用此例外。
 - 不为消除眼前报错删引用、加替代桩或改插件原件来“拆东墙补西墙”。不把 Base/Agentic 当扩大权限的理由。配置改名不是修改已有人工注释的授权，更不是改变版权主体。
+- 开发和验收文件只放项目目录或用户指定的项目工作区，不往桌面、系统目录或其他位置散放，见[工作准备与验收文件](references/contract.md#工作准备与验收文件)。
+- 占用真实前台桌面时，用完、失败、取消或交接都立即归还鼠标和键盘，见[前台桌面操作用完立即释放](references/interaction.md#前台桌面操作用完立即释放)。
 - 许可义务见 [许可分区](references/licensing.md)。更新使用原生管理器或 Git fast-forward，不强制覆盖本地修改，不共享秘密，不修改其他技能。
 
 ## 共享记忆要点
@@ -84,7 +88,7 @@ metadata:
 
 编写或审查已采用源码、以及 Unity 编译和效果验收，按[协作契约](references/contract.md#修改迁移与验证)执行。提交前核可见性、格式、验证边界和隐私脱敏。
 
-向人类交付时优先说办好没有、有什么变化、还差什么，按需给真实对照或证据入口，见[给人类的最终回执](references/interaction.md#给人类的最终回执)。
+向人类交付时优先说办好没有、有什么变化、还差什么，默认只报结果，按需给真实对照或证据入口，见[给人类的最终回执](references/interaction.md#给人类的最终回执)。任务结束时按[Issue 收尾](references/branch-workflow.md#任务范围内的-issue-必须收尾)复核范围内的 Issue：先核验、再勾选，完整完成且有权限才关闭，不扫无关单。验收文件的入口放在项目目录内，见[工作准备与验收文件](references/contract.md#工作准备与验收文件)。
 
 ## 常见误用
 
