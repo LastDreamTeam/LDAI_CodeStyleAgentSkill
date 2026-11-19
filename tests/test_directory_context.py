@@ -107,8 +107,8 @@ class DirectoryContextTests(unittest.TestCase):
                 for term in (role, '持久共享', '未安装本技能', '不在舰队或指挥系统',
                              '不是临时文件', '私有记忆', '不得擅自删除或改作他用',
                              '逻辑作用域', 'README', '当前任务授权', '先读',
-                             '九成以上把握', '内容压缩', '专门获授权',
-                             '日期', '实际执行身份', '公开默认昵称/模型名', '来源', '不高于'):
+                             '可核对的重复依据', '同一条目标识', '同一来源哈希', '内容压缩', '专门获授权',
+                             '日期', '实际执行身份', '公开默认不写模型身份段', '来源', '不高于'):
                     self.assertIn(term, header)
                 if kind != 'readme':
                     self.assertIn('../README.md', header)
@@ -240,7 +240,7 @@ class DirectoryContextTests(unittest.TestCase):
         for path in paths:
             text = path.read_text(encoding='utf-8')
             with self.subTest(path=path.name):
-                for term in ('九成以上把握', '无损整合', '内容压缩', '专门获授权', '审计/辅助模型'):
+                for term in ('可核对的重复依据', '同一条目标识', '同一来源哈希', '无损整合', '内容压缩', '专门获授权', '审计/辅助模型'):
                     self.assertIn(term, text)
         self.assertIn('否则直接忽略', (SKILL/'SKILL.md').read_text(encoding='utf-8'))
 
