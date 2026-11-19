@@ -169,7 +169,7 @@ def detect_project_kind(project_root):
 
 
 def has_existing_memory(project_root):
-    """OpenAI: 查找已有 Agentic 记忆文件；已有资料应继续维护，不管当前引擎默认。"""
+    """OpenAI: 查找已有 Agentic 记忆文件；已有资料应继续维护，不管当前是否排除。"""
     root = Path(project_root)
     if any((root / 'Agentic' / name).is_file() for name in _MEMORY_NAMES):
         return True
@@ -185,21 +185,20 @@ def has_existing_memory(project_root):
 
 
 def memory_auto_maintain(project_root, excluded):
-    """OpenAI: 黑名单优先；否则重型引擎或已有记忆文件才默认自动维护。"""
+    """OpenAI: 黑名单优先；未被排除时默认自动维护，与引擎或语言无关。"""
     if excluded:
         return False
-    if detect_project_kind(project_root) in _HEAVY_KINDS:
-        return True
-    return has_existing_memory(project_root)
+    return True
 
 
 def project_memory(command, project_root, *, owner_requested=False, persist_user=False,
                    environ=None, registry=None, windows=None, lock_directory=None):
     """OpenAI: 返回当前项目记忆状态及可选环境建议，只有显式 Windows 持久化才写系统。
 
-    enabled 表示当前是否应自动创建/维护共享记忆：未被黑名单排除，且属于重型
-    引擎或已有记忆文件。excluded_roots 始终是已观察的排除列表；desired_* 是主人
-    要求的候选。显式文档采用或用户当次要求由调用方判定，不在本工具内猜测。
+    enabled 表示当前是否应自动创建/维护共享记忆：未被黑名单排除即默认启用，
+    与引擎或语言无关。他人仓库是否适用由调用方按主人/成员/合作者角色判定，
+    本工具不认证身份。excluded_roots 始终是已观察的排除列表；desired_* 是主人
+    要求的候选。
     默认变更不改进程环境或项目文件，Windows 写后读验成功才返回 persisted=true。
     environ/registry/windows/lock_directory 可注入隔离测试；持久变更在当前用户共享锁
     内重读、计算与写验，正常查询只读取本机单个环境变量，不写锁或项目资料。

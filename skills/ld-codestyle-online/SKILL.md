@@ -13,17 +13,17 @@ metadata:
 
 # LD CodeStyle Online
 
-让人类通过 Markdown、自然语言和小而清楚的代码契约表达创意、设计与边界；Agent 承接可替换的实现与验证。本技能分层适用：**提交身份覆盖一切仓库；共享 Markdown 记忆按项目类型与采用情况启用；Unity/OOP 架构规则仅在适配范围使用。**不同引擎使用真实模块路径映射 README 与 Agentic，不把 Unity 目录生搬过去。规则覆盖不代表所有宿主与引擎均已实机验收。本在线版基于 LD v6 实践整理，独立版本 **0.7.0**，不与旧版叠加执行。
+让人类通过 Markdown、自然语言和小而清楚的代码契约表达创意、设计与边界；Agent 承接可替换的实现与验证。本技能分层适用：**提交身份覆盖一切仓库；共享 Markdown 记忆在适用仓库默认启用；Unity/OOP 架构规则仅在适配范围使用。**不同引擎使用真实模块路径映射 README 与 Agentic，不把 Unity 目录生搬过去。规则覆盖不代表所有宿主与引擎均已实机验收。本在线版基于 LD v6 实践整理，独立版本 **0.7.0**，不与旧版叠加执行。
 
-本技能首先约束开发规范、习惯与风格，相对面向更多放权给 AI 的 Solo 开发者和希望减少代码失控的新手；不保证适合所有人，保障目标仍在完善、效果可能有限，不能代替测试和必要的人类判断。0.7.0 起规则全部保留，但按当前任务按需阅读，不要一启用就整套加载。
+本技能是 LastDream / LastDreamTeam 的组织内部人类与 Agent 协作规范，不是面向大众的通用风格指南。安装本技能即表示按这套私有规范执行。仓库公开只是发布形式，不表示要覆盖组织外的各种使用情景；他人自行拿到无关项目上使用，不在本规范的维护范围内。保障目标仍在完善，不能代替测试和必要的人类判断。0.7.0 起规则全部保留，但按当前任务按需阅读，不要一启用就整套加载。按需阅读不是减配：在适用仓库里编码时，记忆、提交、分支与审查、注释和架构约定该用就用。
 
 ## 何时启用
 
 1. **提交身份是全仓库规则**：所有 AI 的新提交均适用，与引擎、语言、项目重量、是否采用OOP及共享记忆黑名单无关。私有按 Bot/Agent 强制准确身份。公开默认首行只写摘要，不写 `##模型：` 身份段；主人可明确要求公开名称。细则见[提交规范](references/commit.md)。
-2. **共享 Markdown 记忆按项目类型默认，明确排除的黑名单仍然优先**：当前宿主存在本技能时，Unity、UE/Unreal、Cocos、Godot 及同类重型生产/工业引擎的一方项目默认启用。Web/H5、Vue、Node.js、PHP、TypeScript、Python 及无底层引擎项目默认不启用，除非项目已经存在 `Agentic/USER.md`、`MEMORY.md` 或 `DEBUG.md`，或项目 `AGENTS.md`、所属 README 明确采用共享记忆，或用户当次明确要求启用。已有记忆文件要继续维护，不得遗弃。主人明确要求某项目不使用共享记忆时，才记录其真实项目根到本机环境变量黑名单；明确黑名单即使在重型引擎项目也排除自动创建和维护。
+2. **共享 Markdown 记忆在适用仓库默认启用，明确排除的黑名单仍然优先**：只要当前宿主安装了本技能，并且正在处理我们作为主人、成员或合作者的仓库（含公开仓），共享记忆默认启用，与引擎、语言或项目是否轻量无关。已有记忆文件要继续维护，不得遗弃。他人仓库在我们既不是主人、也不是成员或合作者时不适用，不要建立或接管共享记忆。主人明确要求某项目不使用共享记忆时，才记录其真实项目根到本机环境变量黑名单；明确黑名单即使在一方项目也排除自动创建和维护。
 3. 使用 `python -B scripts/project_memory.py show --project-root "<真实项目根>"` 查询当前项目。按[跨项目记忆与黑名单](references/memory-scope.md)识别真实根、映射模块路径与 README 同级逻辑范围；配置坏值报错，不假定启用/排除。排除仅停止本技能自动创建/维护该项目共享记忆，不删除既有资料、不关闭身份或版本健康要求，也不影响兄弟项目。只读任务仍按需读取，写任务才在触及区域建立/维护有真实内容的文档，不做全仓空模板铺设。
-4. **其余源码风格与Unity/OOP规则单独判适配**。已核实由 LD/LastDreamTeam 开发的项目，其一方源码默认采用 LD 风格，不论是否Unity。第三方或他人项目须明确采用，以项目 `AGENTS.md`、所属 README 的声明或用户当次明确要求为据。`LD:`、`I<类型>Base`、`.Agentic` 可帮助查找已采用的区域，不能仅凭工作目录、fork 归属、孤立标记或随包示例推定项目采用。在已采用LD源码风格的一方代码中，写或审查源码时再读[函数文档与原理注释](references/comments.md)、[注释归属](references/comments.md#注释归属)、[局部格式整理](references/contract.md#代码格式整理)和[插件边界](references/contract.md#插件纯净与必要改写)。在已采用源码规则的范围内，Unity 项目须同时有 `Assets/` 和 `ProjectSettings/ProjectVersion.txt` 才套用 Inspector 与资产规范。配对 Base、Model/Manager/ViewModel/View 等按项目采用的结构执行。精选 SQLite 历史由责任区另行声明。
-5. **协作流程与写作约定**：[分支与两次合并请求](references/branch-workflow.md)、[合并请求的技术审查](#合并请求的技术审查)在项目未声明自己分支、合并或审查规则时，对 Unity、UE/Unreal、Cocos、Godot 及同类重型引擎项目，以及项目明确采用本流程时，作为默认做法。轻量或无引擎项目若没有项目级分支约定，主分支上的小修不必每次先问是否开分支；真正涉及分支、PR 或合并时再读该页。项目 `AGENTS.md`/README 有约定以项目为准。[Issue 与根 README](references/public-writing.md)和[给人类的最终回执](references/interaction.md#给人类的最终回执)适用于 AI 在任一项目写给人看的产物，目标项目已有规则优先。它们不新增提交、推送、合并或发布授权，也不把用户当前已明确的决定再设一道闸。
+4. **其余源码风格与Unity/OOP规则单独判适配**。已核实由 LD/LastDreamTeam 开发的项目，其一方源码默认采用 LD 风格，不论是否Unity。我们作为主人、成员或合作者参与的仓库同样执行。第三方或他人项目须明确采用，以项目 `AGENTS.md`、所属 README 的声明或用户当次明确要求为据；若只是路过、既不是主人、成员也不是合作者，不得按本规范接管。`LD:`、`I<类型>Base`、`.Agentic` 可帮助查找已采用的区域，不能仅凭工作目录、fork 归属、孤立标记或随包示例推定项目采用。在已采用LD源码风格的一方代码中，写或审查源码时再读[函数文档与原理注释](references/comments.md)、[注释归属](references/comments.md#注释归属)、[局部格式整理](references/contract.md#代码格式整理)和[插件边界](references/contract.md#插件纯净与必要改写)。在已采用源码规则的范围内，Unity 项目须同时有 `Assets/` 和 `ProjectSettings/ProjectVersion.txt` 才套用 Inspector 与资产规范。配对 Base、Model/Manager/ViewModel/View 等按项目采用的结构执行。精选 SQLite 历史由责任区另行声明。
+5. **协作流程与写作约定**：[分支与两次合并请求](references/branch-workflow.md)、[合并请求的技术审查](#合并请求的技术审查)是项目未声明自己分支、合并或审查规则时的默认做法，适用于上述适用仓库，与引擎或项目是否轻量无关。真正涉及分支、PR 或合并，或在主分支上开始改动时再读该页。项目 `AGENTS.md`/README 有约定以项目为准。[Issue 与根 README](references/public-writing.md)和[给人类的最终回执](references/interaction.md#给人类的最终回执)适用于 AI 在适用仓库写给人看的产物，目标项目已有规则优先。它们不新增提交、推送、合并或发布授权，也不把用户当前已明确的决定再设一道闸。
 6. 当前请求和最近工程规则优先；默认记忆维护不扩大业务任务、提交、发布、重构或第三方修改授权。生成代码、第三方原插件和无关工程不因路径映射被接管。
 
 ## 按需阅读
@@ -36,7 +36,7 @@ metadata:
 | 编写或审查已采用的一方源码 | [强制注释](references/comments.md) 与 [协作契约](references/contract.md) 中的格式、插件部分 |
 | 项目确实是 Unity（同时有 `Assets/` 和 `ProjectSettings/ProjectVersion.txt`） | [协作契约](references/contract.md) 中的 Unity、Inspector、资产与 OOP 部分。不要把 `I*Base`、画面验收或场景/预制件规则套到普通非 Unity 脚本上 |
 | 项目确实是 UE、Cocos、Godot 或同类引擎 | [跨项目记忆与黑名单](references/memory-scope.md) 里对应的路径映射，以及该引擎已采用的结构约定 |
-| 共享记忆已采用，或项目已有 `Agentic/USER.md`、`MEMORY.md`、`DEBUG.md` | [记忆范围](references/memory-scope.md)、[目录共享上下文](references/directory-context.md)、需要时再读 [区域历史](references/memory-history.md)。每份文件头部须自足说明用途与边界 |
+| 适用仓库的编码任务，或项目已有 `Agentic/USER.md`、`MEMORY.md`、`DEBUG.md` | [记忆范围](references/memory-scope.md)、[目录共享上下文](references/directory-context.md)、需要时再读 [区域历史](references/memory-history.md)。每份文件头部须自足说明用途与边界 |
 | 任务实际涉及分支、PR 或合并，或重型默认流程适用 | [分支与两次合并请求](references/branch-workflow.md) |
 | 正在写 Issue 或项目根 README | [Issue 与根 README](references/public-writing.md) |
 | 正在向人询问、写回执，或推送前无法安全决策 | [交互约定](references/interaction.md)，含[推送前求助](references/interaction.md#推送前无法安全决策时的求助) |
@@ -51,7 +51,7 @@ metadata:
 - 不发明提交、推送、合并或发布授权。用户当前已经明确的决定不再设闸。
 - 先核目标仓库可见性。未知或查询失败不默认私有，不向未核目标推送。公开与私有格式见[提交规范](references/commit.md)。公开前须做隐私检查与脱敏。私有混合贡献首行使用 `##主人 + 模型：<已核身份> | <摘要>`，其中 `主人` 取独立配置的 `human_commit_name`。
 - 改配置时，`human_name` 是人类注释标识，`human_commit_name` 是混合提交显示名，两者分开；修改命令仍只在 README 参数设置。
-- 共享记忆未采用时，不要主动建立 `Agentic/USER.md`、`MEMORY.md` 或 `DEBUG.md`。已有文件按原可见范围继续维护。
+- 共享记忆被黑名单排除，或不属于适用仓库时，不要主动建立 `Agentic/USER.md`、`MEMORY.md` 或 `DEBUG.md`。已有文件按原可见范围继续维护。
 - 普通 Agent 仅在有可核对的重复依据时，才剔除明显重复或做无损整合：同一条目标识、同一来源哈希，或当前摘要中已逐字重复的同一事实。依据不清、不能确定信息等价或有歧义时，直接忽略该整理并保留原文。**内容压缩**通常仅由专门获授权允许的审计/辅助模型执行，不能借去重删掉独立信息。已采用[区域历史](references/memory-history.md)的区域，授权区域维护者可在精选原文入库、读回核验和旧摘要保全后压缩该区三份摘要；README/人类资料及未采用区域不适用此例外。
 - 不为消除眼前报错删引用、加替代桩或改插件原件来“拆东墙补西墙”。不把 Base/Agentic 当扩大权限的理由。配置改名不是修改已有人工注释的授权，更不是改变版权主体。
 - 许可义务见 [许可分区](references/licensing.md)。更新使用原生管理器或 Git fast-forward，不强制覆盖本地修改，不共享秘密，不修改其他技能。
@@ -88,7 +88,7 @@ metadata:
 
 ## 常见误用
 
-- 提交看可见性，共享记忆看责任区、项目类型与黑名单，源码风格看一方归属或明确采用，Unity/OOP 结构另看项目适配。LD 的非 Unity 一方项目同样执行注释、归属与格式规则。
-- 不要把本技能的入口当成每次任务的必读链。轻量项目不要默认去建共享记忆，也不要把重型引擎的分支仪式套到无关的小修上。
+- 提交看可见性，共享记忆看责任区、适用仓库与黑名单，源码风格看一方归属或明确采用，Unity/OOP 结构另看项目适配。LD 的非 Unity 一方项目同样执行注释、归属与格式规则。
+- 不要把本技能的入口当成每次任务的必读链。按需阅读不是允许在适用仓库里省略共享记忆、分支审查、注释或架构约定。不要把本规范套到既不是主人、成员也不是合作者的他人仓库上。
 - 不把接口全锁死，也不把 Base/Agentic 当扩大权限的理由。
 - 配置改名不是修改已有人工注释的授权，更不是改变版权主体。
