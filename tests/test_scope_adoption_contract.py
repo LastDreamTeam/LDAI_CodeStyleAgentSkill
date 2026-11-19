@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: AGPL-3.0-only
-"""Anthropic: 核对 0.6.1 的采用判定、流程让位与触发描述，不冒称外部 Agent 已遵守。"""
+"""Anthropic: 核对 0.7.0 的采用判定、流程让位与触发描述，不冒称外部 Agent 已遵守。"""
 from pathlib import Path
 import re
 import unittest
@@ -65,10 +65,12 @@ class ScopeAdoptionContractTests(unittest.TestCase):
         self.assertLessEqual(len(description), 1024)
         # OpenAI: 宿主可能截短描述，所以把适用项目放在前面，并避免 XML 形状的元数据。
         self.assertNotRegex(description, r"[<>]")
-        for term in ("writing", "reviewing", "committing", "PRs", "Issues", "README",
-                     "Markdown memory", "Base interfaces", "LD/LastDreamTeam"):
+        for term in ("writing", "reviewing", "committing", "LD/LastDreamTeam"):
             with self.subTest(term=term):
                 self.assertIn(term, description)
+        for term in ("Issues", "README", "PRs"):
+            with self.subTest(term=term):
+                self.assertNotIn(term, description)
 
     def test_installed_skill_docs_do_not_link_outside_the_skill(self):
         """Anthropic: Hermes 只装技能子目录，技能内相对链接不能跳出安装单元。"""

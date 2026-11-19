@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: AGPL-3.0-only
-"""OpenAI: Public defaults expose only intended identity, with explicit user overrides."""
+"""OpenAI: Public defaults omit identity, with explicit public-name overrides."""
 import importlib.util
 import json
 import os
@@ -32,43 +32,35 @@ class PublicCommitPrivacyTests(unittest.TestCase):
             with self.subTest(encoding=encoding), tempfile.TemporaryDirectory() as tmp:
                 result = subprocess.run(
                     [sys.executable, '-B', str(SCRIPT), '--data-root', tmp,
-                     'commit-header', '--visibility', 'public', '--bot', '列克星敦',
-                     '--named-bot', '--summary', '公开摘要 🌙 café'],
+                     'commit-header', '--visibility', 'public',
+                     '--summary', '公开摘要 🌙 café'],
                     env=dict(os.environ, PYTHONIOENCODING=encoding), capture_output=True, timeout=10)
                 self.assertEqual(result.returncode, 0, result.stderr)
                 self.assertEqual(json.loads(result.stdout.decode('ascii')),
-                                 {'header': '##模型：列克星敦 | 公开摘要 🌙 café',
-                                  'identity': '列克星敦', 'visibility': 'public'})
+                                 {'header': '公开摘要 🌙 café',
+                                  'identity': '', 'visibility': 'public'})
 
-    def test_public_defaults_to_bot_nickname_or_complete_model_without_reasoning(self):
-        """OpenAI: 公开默认 Bot 只留昵称，Agent 只留完整型号并保留型号本身的后缀。"""
+    def test_public_defaults_to_summary_only_without_identity(self):
+        """OpenAI: 公开默认只留摘要，忽略内部身份字段，也不因缺少 bot/model 失败。"""
         with tempfile.TemporaryDirectory() as tmp:
-            for flags, expected in (
-                (('--client', 'Hermes', '--bot', '列克星敦', '--named-bot'), '列克星敦'),
-                (('--client', 'Codex', '--model', 'vendor/Exact-Model-v2-high',
-                  '--reasoning-effort', 'xhigh'), 'vendor/Exact-Model-v2-high'),
-                (('--model', 'GPT Sol6.1 xhigh', '--reasoning-effort', 'xhigh'), 'GPT Sol6.1'),
-                (('--model', 'GPT Sol6.1 XHIGH', '--reasoning-effort', 'xhigh'), 'GPT Sol6.1'),
-            ):
-                with self.subTest(expected=expected):
+            cases = (
+                (),
+                ('--client', 'Hermes', '--bot', '列克星敦', '--named-bot'),
+                ('--client', 'Codex', '--model', 'vendor/Exact-Model-v2-high',
+                 '--reasoning-effort', 'xhigh'),
+                ('--model', 'GPT Sol6.1 xhigh', '--reasoning-effort', 'xhigh'),
+                ('--model', 'GPT'),
+            )
+            for flags in cases:
+                with self.subTest(flags=flags):
                     result = self.invoke(tmp, '--visibility', 'public', *flags,
                                          '--pc', 'PRIVATE-HOST', '--mixed-human', '--summary', '公开摘要')
                     self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
                     self.assertEqual(json.loads(result.stdout),
-                                     {'header': f'##模型：{expected} | 公开摘要',
-                                      'identity': expected, 'visibility': 'public'})
+                                     {'header': '公开摘要',
+                                      'identity': '', 'visibility': 'public'})
                     self.assertNotIn('PRIVATE-HOST', result.stdout + result.stderr)
-            for model in ('GPT Sol6.1 xhigh', 'GPT Sol6.1 XHIGH', 'GPT', 'Sol', 'GPT Sol',
-                          'DSH', 'DSH Bot', 'auto', '<model>'):
-                with self.subTest(model=model):
-                    result = self.invoke(tmp, '--visibility', 'public', '--model', model,
-                                         '--summary', '不能猜测实际身份')
-                    self.assertNotEqual(result.returncode, 0, result.stdout)
-            for model, effort in (('GPT Sol6.1 high xhigh', 'xhigh'),
-                                  ('GPT Sol6.1 high', 'xhigh')):
-                result = self.invoke(tmp, '--visibility', 'public', '--model', model,
-                                     '--reasoning-effort', effort, '--summary', '拒绝混合档位')
-                self.assertNotEqual(result.returncode, 0, result.stdout)
+                    self.assertNotIn('##模型', result.stdout)
 
     def test_public_overrides_are_explicit_mutually_exclusive_and_private_cannot_use_them(self):
         """OpenAI: 用户可明确指定公开名称或省略，但同样参数不能削弱私有身份要求。"""
@@ -123,8 +115,8 @@ class PublicCommitPrivacyTests(unittest.TestCase):
                                             client='PRIVATE-FRAMEWORK', reasoning_effort='high',
                                             computer_name='PRIVATE-HOST', mixed_human=True,
                                             visibility='public')
-            self.assertEqual(result, {'header': '##模型：gpt-6-astra | 公开摘要',
-                                      'identity': 'gpt-6-astra', 'visibility': 'public'})
+            self.assertEqual(result, {'header': '公开摘要',
+                                      'identity': '', 'visibility': 'public'})
             # OpenAI: 显式省略不读取被舍弃的内部身份，即使其值尚不可验证。
             result = identity.commit_result(UnreadableConfig(), object(), object(), '公开摘要',
                                             visibility='public', omit_public_identity=True)
@@ -157,8 +149,8 @@ class PublicCommitPrivacyTests(unittest.TestCase):
                                  '--mixed-human', '--computer-name', 'PRIVATE-HOST', '--summary', '公开摘要')
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             self.assertEqual(json.loads(result.stdout),
-                             {'header': '##模型：gpt-6-astra | 公开摘要',
-                              'identity': 'gpt-6-astra', 'visibility': 'public'})
+                             {'header': '公开摘要',
+                              'identity': '', 'visibility': 'public'})
             self.assertNotIn('PRIVATE-', result.stdout + result.stderr)
             self.assertEqual(before.read_bytes(), raw)
             self.assertEqual(list(data.iterdir()), [before])
@@ -174,7 +166,9 @@ class PublicCommitPrivacyTests(unittest.TestCase):
             self.assertFalse(skill.exists())
             self.assertFalse(empty_data.exists())
             missing_identity = self.invoke(empty_data, '--visibility', 'public', '--summary', '未声明身份')
-            self.assertNotEqual(missing_identity.returncode, 0)
+            self.assertEqual(missing_identity.returncode, 0, missing_identity.stdout + missing_identity.stderr)
+            self.assertEqual(json.loads(missing_identity.stdout),
+                             {'header': '未声明身份', 'identity': '', 'visibility': 'public'})
             self.assertFalse(empty_data.exists())
 
     def test_rules_and_copyable_memory_templates_keep_privacy_and_review_boundaries(self):
@@ -194,8 +188,10 @@ class PublicCommitPrivacyTests(unittest.TestCase):
                      '未知/查询失败不默认私有', '不重写旧提交', '--reasoning-effort',
                      '--public-name', '--omit-public-identity', '独立身份', 'none', '自有邮箱'):
             self.assertIn(term, spec)
+        for required in ('公开仓库：默认只留摘要', '不写模型身份段', '只写摘要'):
+            self.assertIn(required, spec)
         for obsolete in ('生成器默认调用当前 OS', '--client` 与 `--bot` 二选一',
-                         '不在姓名中塞型号或PC', '公开仓库：省略整个模型身份段'):
+                         '不在姓名中塞型号或PC', '默认保留简短身份'):
             self.assertNotIn(obsolete, spec)
 
 
