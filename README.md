@@ -8,11 +8,11 @@ LastDream / LastDreamTeam 的编程 Agent 协作规范。维护者通过接口�
 
 ## 安装
 
-### 一句话交给你的 Agent
-
 ```text
 请为当前宿主安装完整的 ld-codestyle-online，验证宿主能发现技能并报告已装版本。安装说明见 https://github.com/LastDreamTeam/LDAI_CodeStyleAgentSkill/blob/main/skills/install.md
 ```
+
+安装完成后，在同一个宿主里让 Agent 报出技能名称和已装版本，再打开[审查 PR 的规则](skills/ld-codestyle-online/references/pr-review.md)。这样可以分别确认宿主发现了入口，安装包里也带齐了按需读取的参考文件。
 
 安装需要支持技能的 Agent 宿主。辅助工具使用 Python 3.10 或更高版本，Git 安装方式还需要本机 Git。[分宿主安装步骤](skills/install.md) · [纯文本安装说明](https://raw.githubusercontent.com/LastDreamTeam/LDAI_CodeStyleAgentSkill/main/skills/install.md)
 
@@ -30,6 +30,14 @@ Hermes 使用原生管理器。支持本地技能的宿主可用独立 Git 克�
 **本地账号优先，默认开启。** 本地提交沿用仓库生效的 Git 作者和邮箱。推送、处理 PR 或 Issue 时，优先使用目标主机上已授权的本机账号。只有主人明确要求长期停用，才为该主人保留例外。单次指定账号只影响当次操作。[本地账号优先](skills/ld-codestyle-online/references/commit.md#本地账号优先)
 
 [源码与生命周期对照](#使用前后会有什么不同) · [模块交接示意](#模块交接图) · [日常任务示例](#日常怎么用) · [详细手册](#详细手册) · [本仓共享上下文](#本仓库的共享上下文入口)
+
+### 按手头工作找规则
+
+| 现在要做什么 | 先看哪一页 |
+| --- | --- |
+| 给 Issue 起标题、选择优先级或标签，或改项目首页 | [Issue 与 README 写作](skills/ld-codestyle-online/references/public-writing.md) |
+| 写实现或修复问题 | [函数与核心逻辑注释](skills/ld-codestyle-online/references/comments.md) |
+| 交付改动或审查 PR | [提交与本地账号](skills/ld-codestyle-online/references/commit.md) · [PR 的审查判据](skills/ld-codestyle-online/references/pr-review.md) |
 
 ### 核心约定一览
 
