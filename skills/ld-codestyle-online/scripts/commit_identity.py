@@ -108,10 +108,11 @@ def _pc(pc, computer_name):
 def commit_identity(model=None, bot='', *, client='', named_bot=False, computer_name=None,
                     visibility=None, reasoning_effort=None, public_name=None,
                     omit_public_identity=False, pc=None):
-    """OpenAI: 按已核目标返回可复用的真实身份字符串，省略公开身份时返回空串。
+    """OpenAI: 按已核目标返回可复用的真实身份字符串，公开默认返回空串。
 
     私有 Bot 需要框架、昵称和独立身份声明；私有 Agent 需要框架、完整型号及实际
-    推理强度。公开默认返回 Bot 昵称或型号；公开覆盖由调用方传达用户明确要求。
+    推理强度。公开默认不生成模型身份段；`--public-name` 由调用方传达用户明确要求，
+    `--omit-public-identity` 是该默认的显式别名。公开缺省 bot/model 不再失败。
     函数无文件、主机或 Git 副作用；不验证调用者的运行身份、授权或资料真实性。
     """
     if visibility not in ('public', 'private'):
@@ -123,19 +124,16 @@ def commit_identity(model=None, bot='', *, client='', named_bot=False, computer_
     if visibility == 'private' and (public_name is not None or omit_public_identity):
         raise ValueError('Public identity overrides cannot weaken private identity requirements')
 
-    # OpenAI: 明确公开覆盖先于内部身份字段处理，避免读取、验证或泄漏无关私有资料。
+    # OpenAI: 明确公开处理先于内部身份字段，避免读取、验证或泄漏无关私有资料。
     if visibility == 'public':
         if omit_public_identity:
             return ''
         if public_name is not None:
             return _name(public_name, 'public_name')
+        # OpenAI: 公开默认只留摘要，不校验或回填 bot/model/PC。
+        return ''
 
     bot = _bot_name(bot, named_bot)
-    if visibility == 'public':
-        if bot:
-            return bot
-        effort = _effort(reasoning_effort, required=False)
-        return _model(model, effort)[1]
 
     client = _name(client, 'client')
     client = _PRODUCT_ALIASES.get(client, client)

@@ -98,8 +98,19 @@ class ProjectMemoryTests(unittest.TestCase):
                                lock_directory=isolated_locks if lock_directory is None else lock_directory)
         return code, json.loads(stream.getvalue())
 
-    def test_default_show_enables_memory_without_writing_files_or_environment(self):
-        """OpenAI: 缺变量时默认启用；show 不创建项目资料或写注册表、进程环境。"""
+    def mark_heavy(self, path):
+        """OpenAI: 写入明确的 Unity 工程标记，供启用态测试使用，不代表真实业务项目。"""
+        root = Path(path)
+        (root / 'Assets').mkdir(parents=True, exist_ok=True)
+        settings = root / 'ProjectSettings'
+        settings.mkdir(parents=True, exist_ok=True)
+        version = settings / 'ProjectVersion.txt'
+        if not version.exists():
+            version.write_text('m_EditorVersion: 2022.3.0f1\n', encoding='utf-8')
+        return root
+
+    def test_default_show_enables_light_projects_without_writing(self):
+        """OpenAI: 缺变量时轻量项目也默认启用；show 不创建项目资料或写注册表、进程环境。"""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             env, registry = {}, FakeRegistry()
@@ -107,6 +118,8 @@ class ProjectMemoryTests(unittest.TestCase):
             self.assertEqual(code, 0)
             self.assertEqual(result['status'], 'ok')
             self.assertTrue(result['enabled'])
+            self.assertEqual(result['project_kind'], 'unknown')
+            self.assertFalse(result['existing_memory'])
             self.assertFalse(result['persisted'])
             self.assertEqual(result['source'], 'default')
             self.assertEqual(result['excluded_roots'], [])
@@ -115,6 +128,141 @@ class ProjectMemoryTests(unittest.TestCase):
             self.assertEqual(list(root.iterdir()), [])
             self.assertEqual(env, {})
             self.assertEqual(registry.writes, 0)
+
+    def test_heavy_engine_and_existing_memory_enable_unless_excluded(self):
+        """OpenAI: Unity 标记或已有记忆文件仍默认启用；黑名单仍可关闭重型项目。"""
+        with tempfile.TemporaryDirectory() as tmp:
+            unity = self.mark_heavy(Path(tmp) / 'unity')
+            env, registry = {}, FakeRegistry()
+            code, result = self.invoke(unity, 'show', environ=env, registry=registry)
+            self.assertEqual(code, 0)
+            self.assertTrue(result['enabled'])
+            self.assertEqual(result['project_kind'], 'unity')
+            self.assertFalse(result['existing_memory'])
+            self.assertEqual(env, {})
+            self.assertEqual(registry.writes, 0)
+            light = Path(tmp) / 'web'
+            light.mkdir()
+            (light / 'Agentic').mkdir()
+            (light / 'Agentic' / 'MEMORY.md').write_text('fixture memory', encoding='utf-8')
+            code, result = self.invoke(light, 'show', environ=env, registry=registry)
+            self.assertEqual(code, 0)
+            self.assertTrue(result['enabled'])
+            self.assertEqual(result['project_kind'], 'unknown')
+            self.assertTrue(result['existing_memory'])
+            excluded = {memory.VARIABLE: json.dumps([str(unity)])}
+            code, result = self.invoke(unity, 'show', environ=excluded, registry=registry)
+            self.assertEqual(code, 0)
+            self.assertFalse(result['enabled'])
+            self.assertEqual(result['project_kind'], 'unity')
+
+    def make_symlink(self, link, target, directory=True):
+        """OpenAI: 以真实链接构造路径，只在 Windows 未授予创建符号链接权限时跳过。"""
+        try:
+            link.symlink_to(target, target_is_directory=directory)
+        except OSError as exc:
+            if getattr(exc, 'winerror', None) == 1314:
+                self.skipTest('Windows symlink privilege unavailable')
+            raise
+
+    def check_directory_links(self, create_link):
+        """OpenAI: 用同一套项目内外、重复入口与环路现场检验符号链接和 Windows 联接。"""
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp) / 'project'
+            module = project / 'module'
+            records = project / 'records'
+            other = Path(tmp) / 'project-other'
+            module.mkdir(parents=True)
+            records.mkdir()
+            (other / 'Agentic').mkdir(parents=True)
+            (other / 'Agentic' / 'MEMORY.md').write_text('other project', encoding='utf-8')
+            (records / 'USER.md').write_text('local intent', encoding='utf-8')
+            create_link(project / 'Agentic', other / 'Agentic')
+            create_link(project / 'external', other)
+            create_link(project / 'alias', module)
+            create_link(module / 'loop', project)
+            metadata = project / '.git' / 'records'
+            metadata.mkdir(parents=True)
+            (metadata / 'MEMORY.md').write_text('git fixture', encoding='utf-8')
+            create_link(module / 'metadata', metadata)
+            create_link(records / 'Agentic', metadata)
+
+            with patch.object(memory.os, 'scandir', wraps=os.scandir) as scan:
+                self.assertFalse(memory.has_existing_memory(project))
+            # OpenAI: 无命中时实际遍历完整个测试项目，但外部目录与已访问目录都不再进入。
+            visited = [Path(call.args[0]).resolve() for call in scan.call_args_list]
+            self.assertCountEqual(visited, [project.resolve(), module.resolve(), records.resolve()])
+
+            create_link(module / 'Agentic', records)
+            code, result = self.invoke(project, 'show')
+            self.assertEqual(code, 0)
+            self.assertTrue(result['existing_memory'])
+            self.assertTrue(result['enabled'])
+
+    def test_project_modules_and_root_fast_path(self):
+        """OpenAI: 真实模块可名为 Build 或 Library；根目录已有记忆可直接命中。"""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            area = root / 'src' / 'Build' / 'Library' / 'Agentic'
+            area.mkdir(parents=True)
+            (area / 'README.md').write_text('module index', encoding='utf-8')
+            self.assertFalse(memory.has_existing_memory(root))
+            (area / 'DEBUG.md').write_text('module history', encoding='utf-8')
+            self.assertTrue(memory.has_existing_memory(root))
+            (root / 'Agentic').mkdir()
+            (root / 'Agentic' / 'MEMORY.md').write_text('root history', encoding='utf-8')
+            with patch.object(memory.os, 'scandir', side_effect=AssertionError('unexpected scan')):
+                self.assertTrue(memory.has_existing_memory(root))
+
+    def test_disappearing_directory_entry_does_not_hide_module_memory(self):
+        """OpenAI: 枚举与查询之间消失一个目录项时继续查找同项目的真实记忆。"""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / 'moving').mkdir()
+            area = root / 'module' / 'Agentic'
+            area.mkdir(parents=True)
+            (area / 'MEMORY.md').write_text('module history', encoding='utf-8')
+            classify = memory._project_directory
+
+            def classify_during_move(entry, project):
+                """OpenAI: 只注入单个条目的删除竞态，其余路径用实际文件系统验证。"""
+                if entry.name == 'moving':
+                    raise FileNotFoundError(entry.path)
+                return classify(entry, project)
+
+            with patch.object(memory, '_project_directory', side_effect=classify_during_move):
+                self.assertTrue(memory.has_existing_memory(root))
+
+    def test_only_in_project_directory_symlinks_contribute_memory(self):
+        """OpenAI: 根和模块的目录符号链接不跨项目，根内别名仍可暴露实际记忆。"""
+        self.check_directory_links(self.make_symlink)
+
+    @unittest.skipUnless(os.name == 'nt', 'NTFS junctions require Windows')
+    def test_only_in_project_junctions_contribute_memory(self):
+        """OpenAI: 用不依赖符号链接权限的真实 NTFS 联接复核根内外和循环。"""
+        import _winapi
+        self.check_directory_links(lambda link, target: _winapi.CreateJunction(str(target), str(link)))
+
+    def test_memory_files_resolve_within_the_project(self):
+        """OpenAI: 根级和模块级的三个记忆文件允许根内链接，不把外链、断链和普通说明当记忆。"""
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp) / 'project'
+            module = project / 'module' / 'Agentic'
+            module.mkdir(parents=True)
+            records = project / 'Agentic'
+            records.mkdir()
+            external = Path(tmp) / 'external.md'
+            external.write_text('other project', encoding='utf-8')
+            local = project / 'notes.md'
+            local.write_text('local intent', encoding='utf-8')
+            (module / 'README.md').write_text('module index', encoding='utf-8')
+            (records / 'DEBUG.md').mkdir()
+            self.make_symlink(records / 'USER.md', external, directory=False)
+            self.make_symlink(module / 'MEMORY.md', external, directory=False)
+            self.make_symlink(module / 'DEBUG.md', project / 'missing.md', directory=False)
+            self.assertFalse(memory.has_existing_memory(project))
+            self.make_symlink(module / 'USER.md', local, directory=False)
+            self.assertTrue(memory.has_existing_memory(project))
 
     def test_exclude_and_include_require_explicit_owner_request(self):
         """OpenAI: 缺少主人明确要求声明时，两种变更都不得生成已生效结果或写环境。"""
@@ -133,21 +281,22 @@ class ProjectMemoryTests(unittest.TestCase):
     def test_default_changes_are_suggestions_until_host_applies_value(self):
         """OpenAI: 候选状态与当前状态分开，调用方落地建议值后再查询才看到生效。"""
         with tempfile.TemporaryDirectory() as tmp:
+            root = self.mark_heavy(tmp)
             registry, env = FakeRegistry(), {}
-            code, result = self.invoke(tmp, 'exclude', '--owner-requested', environ=env, registry=registry)
+            code, result = self.invoke(root, 'exclude', '--owner-requested', environ=env, registry=registry)
             self.assertEqual(code, 0)
             self.assertEqual(result['status'], 'environment_update_required')
             self.assertTrue(result['enabled'])
             self.assertFalse(result['desired_enabled'])
             self.assertFalse(result['persisted'])
             self.assertEqual(result['excluded_roots'], [])
-            self.assertEqual(result['desired_excluded_roots'], [memory.normalize_project_root(tmp)])
+            self.assertEqual(result['desired_excluded_roots'], [memory.normalize_project_root(root)])
             self.assertEqual(registry.writes, 0)
             self.assertEqual(env, {})
-            self.assertTrue(self.invoke(tmp, 'show', registry=registry)[1]['enabled'])
+            self.assertTrue(self.invoke(root, 'show', registry=registry)[1]['enabled'])
             applied = {memory.VARIABLE: result['value']}
-            self.assertFalse(self.invoke(tmp, 'show', environ=applied, registry=registry)[1]['enabled'])
-            code, include = self.invoke(tmp, 'include', '--owner-requested', environ=applied, registry=registry)
+            self.assertFalse(self.invoke(root, 'show', environ=applied, registry=registry)[1]['enabled'])
+            code, include = self.invoke(root, 'include', '--owner-requested', environ=applied, registry=registry)
             self.assertEqual(code, 0)
             self.assertFalse(include['enabled'])
             self.assertTrue(include['desired_enabled'])
@@ -163,6 +312,9 @@ class ProjectMemoryTests(unittest.TestCase):
             root.mkdir()
             sibling.mkdir()
             nested.mkdir()
+            self.mark_heavy(root)
+            self.mark_heavy(sibling)
+            self.mark_heavy(nested)
             env = {memory.VARIABLE: json.dumps([str(root / '..' / root.name)])}
             for project, expected in ((root, False), (sibling, True), (nested, True)):
                 with self.subTest(project=project):
@@ -179,6 +331,7 @@ class ProjectMemoryTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             target, alias = Path(tmp) / 'target', Path(tmp) / 'alias'
             target.mkdir()
+            self.mark_heavy(target)
             try:
                 alias.symlink_to(target, target_is_directory=True)
             except (OSError, NotImplementedError) as exc:
@@ -196,6 +349,7 @@ class ProjectMemoryTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp) / 'MixedCaseProject'
             root.mkdir()
+            self.mark_heavy(root)
             env = {memory.VARIABLE: json.dumps([str(root).swapcase()])}
             code, result = self.invoke(root, 'show', environ=env)
             self.assertEqual(code, 0)
@@ -234,20 +388,21 @@ class ProjectMemoryTests(unittest.TestCase):
     def test_persistent_registry_value_overrides_stale_process_environment(self):
         """OpenAI: 持久空列表也有优先级，不能被继承的旧排除值重新覆盖。"""
         with tempfile.TemporaryDirectory() as tmp:
+            root = self.mark_heavy(tmp)
             env = {memory.VARIABLE: json.dumps([tmp])}
             registry = FakeRegistry('[]')
-            code, result = self.invoke(tmp, 'show', environ=env, registry=registry)
+            code, result = self.invoke(root, 'show', environ=env, registry=registry)
             self.assertEqual(code, 0)
             self.assertTrue(result['enabled'])
             self.assertEqual(result['source'], 'user_environment')
             self.assertEqual(registry.writes, 0)
             registry.values[memory.VARIABLE] = ('PRIVATE-INVALID-RAW', registry.REG_SZ)
-            code, result = self.invoke(tmp, 'show', environ={memory.VARIABLE: '[]'}, registry=registry)
+            code, result = self.invoke(root, 'show', environ={memory.VARIABLE: '[]'}, registry=registry)
             self.assertNotEqual(code, 0)
             self.assertNotIn('enabled', result)
             self.assertNotIn('PRIVATE-INVALID-RAW', json.dumps(result))
             registry.values[memory.VARIABLE] = (7, registry.REG_DWORD)
-            self.assertNotEqual(self.invoke(tmp, 'show', registry=registry)[0], 0)
+            self.assertNotEqual(self.invoke(root, 'show', registry=registry)[0], 0)
 
     def test_windows_persistence_preserves_other_roots_and_unrelated_environment(self):
         """OpenAI: 显式持久化仅改一个注册表值，回读后才将候选状态标为已生效。"""
@@ -255,6 +410,8 @@ class ProjectMemoryTests(unittest.TestCase):
             root, other = Path(tmp) / 'project', Path(tmp) / 'other'
             root.mkdir()
             other.mkdir()
+            self.mark_heavy(root)
+            self.mark_heavy(other)
             registry = FakeRegistry(json.dumps([str(other)]))
             env = {memory.VARIABLE: '[]', 'UNRELATED_PROCESS': 'unchanged'}
             code, result = self.invoke(root, 'exclude', '--owner-requested', '--persist-user',
@@ -279,22 +436,24 @@ class ProjectMemoryTests(unittest.TestCase):
     def test_including_final_root_persists_empty_list_to_defeat_stale_inheritance(self):
         """OpenAI: 最后一项移除后保存 [] 而非删除变量，防止进程旧值重新成为默认。"""
         with tempfile.TemporaryDirectory() as tmp:
+            root = self.mark_heavy(tmp)
             raw = json.dumps([tmp])
             registry = FakeRegistry(raw)
-            code, result = self.invoke(tmp, 'include', '--owner-requested', '--persist-user',
+            code, result = self.invoke(root, 'include', '--owner-requested', '--persist-user',
                                        environ={memory.VARIABLE: raw}, registry=registry)
             self.assertEqual(code, 0)
             self.assertTrue(result['persisted'])
             self.assertTrue(result['enabled'])
             self.assertEqual(registry.values[memory.VARIABLE], ('[]', registry.REG_SZ))
-            self.assertTrue(self.invoke(tmp, 'show', environ={memory.VARIABLE: raw},
+            self.assertTrue(self.invoke(root, 'show', environ={memory.VARIABLE: raw},
                                         registry=registry)[1]['enabled'])
 
     def test_non_windows_persistence_is_an_explicit_host_action_not_fake_success(self):
         """OpenAI: 非 Windows 返回宿主配置建议，不调用注册表或假称持久化完成。"""
         with tempfile.TemporaryDirectory() as tmp:
+            root = self.mark_heavy(tmp)
             registry = FakeRegistry('PRIVATE-REGISTRY-MUST-NOT-BE-READ')
-            code, result = self.invoke(tmp, 'exclude', '--owner-requested', '--persist-user',
+            code, result = self.invoke(root, 'exclude', '--owner-requested', '--persist-user',
                                        registry=registry, windows=False)
             self.assertEqual(code, 0)
             self.assertTrue(result['enabled'])

@@ -1,5 +1,7 @@
 # 安装、配置与检查/更新
 
+普通编码、审查和提交无需检查或更新本技能。安装验收、专门维护或用户要求时，`show` 查看本机配置，`check` 对比已安装版本与官方发布版本，`health` 说明当前版本和最近检查结果。要更新且没有任务占用安装时才用 `sync --idle`。新安装默认 `auto_update=true`，已有偏好继续生效。
+
 首次安装请把[给 Agent 的安装说明](https://github.com/LastDreamTeam/LDAI_CodeStyleAgentSkill/blob/main/skills/install.md)交给当前 Agent；它须完成环境识别、完整技能接入、实际检查及宿主发现验证，不只复制文档。
 
 需要 Python 3.10+；Git 克隆更新另需 Git，Hermes 安装使用当前环境的 `hermes` 命令。没有 Python 时规范仍可阅读，但脚本未运行就不能声称已自动检查或更新。
@@ -36,9 +38,9 @@ python -B scripts/maintain.py health
 
 ```sh
 python -B scripts/maintain.py health --require-healthy
-# 以下以依赖方需要 0.6.1 为例，使用时换成项目实际版本
-python -B scripts/maintain.py health --min-version 0.6.1
-python -B scripts/maintain.py health --require-version 0.6.1 --require-healthy
+# 以下以依赖方需要 0.7.0 为例，使用时换成项目实际版本
+python -B scripts/maintain.py health --min-version 0.7.0
+python -B scripts/maintain.py health --require-version 0.7.0 --require-healthy
 ```
 
 | 字段 | 含义 |
@@ -96,11 +98,11 @@ Hermes 的原生更新会替换安装目录，因此它使用外部数据目录�
 
 ## 频率与调度的区别
 
-相关任务采用技能时由 `SKILL.md` 指导调用维护入口：首次可立即检查，之后每24小时最多联网检查一次；失败同样计入。用户主动检查也遵守这个上限，未到期返回缓存及健康。普通脚本不调用模型 API，但 Agent 触发/理解结果仍属于该次会话的正常工作。
+安装验收、专门维护或用户要求时才检查版本。每个安装实例在滚动 24 小时内最多联网查一次，失败也计入。再次调用会返回缓存状态。普通开发任务跨日也无需另行检查。
 
 新安装默认每日并开启自动更新；旧的明确关闭保留。检查官方 `main` 的语义版本，而不是每次强拉所有提交。只有完整安装、支持的更新后端、可用网络/权限、有效更新授权和任务空档都具备时才更新；静态文件拷贝不能冒充自动更新接入。
 
-**频率约束不是后台调度器。**相关任务触发由技能文档约定，脚本不会自行开系统服务、安装计划任务、创建cron或修改其他profile，也不会远程更新所有电脑。无人使用时不会自动启动；只有使用者另行明确接入已有调度机制，才会有独立于任务的调用，仍须协调安装占用和同一数据根。
+脚本不会自行启动。使用者明确要求定时维护时，可接入已有调度，仍需协调安装占用，并使用同一数据根。默认不创建系统服务或计划任务。
 
 ## 验收分层
 

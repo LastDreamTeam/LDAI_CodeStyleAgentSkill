@@ -51,7 +51,7 @@ class CompactCommitIdentityTests(unittest.TestCase):
                     self.assertNotIn('"header"', result.stdout)
 
     def test_exact_model_identifier_is_preserved_and_embedded_effort_is_not_duplicated(self):
-        """OpenAI: 完整型号原样保留，明确一致的尾部档位只在公开输出剥离。"""
+        """OpenAI: 完整型号原样保留，明确一致的尾部档位在私有输出中不重复；公开默认不输出身份。"""
         with tempfile.TemporaryDirectory() as tmp:
             for model in ('vendor/Exact-Model-v2.1-high', 'GPT Sol6.1', 'GPT Sol6.1 xhigh',
                           'vendor/model:20b', 'vendor/model-v2@release-3'):
@@ -65,8 +65,8 @@ class CompactCommitIdentityTests(unittest.TestCase):
                     public = self.invoke(tmp, '--visibility', 'public', '--model', model,
                                          '--reasoning-effort', 'xhigh', '--summary', '公开准确型号')
                     self.assertEqual(public.returncode, 0, public.stdout + public.stderr)
-                    expected = model[:-6] if model.endswith(' xhigh') else model
-                    self.assertEqual(json.loads(public.stdout)['identity'], expected)
+                    self.assertEqual(json.loads(public.stdout),
+                                     {'header': '公开准确型号', 'identity': '', 'visibility': 'public'})
             # OpenAI: 不把任意连字符后缀猜成档位，也不靠删除非法字符伪造另一个型号。
             for model, effort in (('GPT Sol6.1 xhigh', 'high'), ('vendor/model+adapter', 'high')):
                 result = self.invoke(tmp, '--visibility', 'private', '--client', 'Codex',
@@ -156,12 +156,15 @@ class CompactCommitIdentityTests(unittest.TestCase):
                                  '--summary', '修复公开入口')
             self.assertEqual(public.returncode, 0, public.stdout + public.stderr)
             public_result = json.loads(public.stdout)
-            self.assertEqual(public_result, {'header': '##模型：fixture-model-v2 | 修复公开入口',
-                                             'identity': 'fixture-model-v2', 'visibility': 'public'})
-            git('-c', 'user.name=' + public_result['identity'], '-c', 'commit.gpgsign=false',
-                'commit', '--allow-empty', '-F', '-',
+            self.assertEqual(public_result, {'header': '修复公开入口',
+                                             'identity': '', 'visibility': 'public'})
+            # OpenAI: 公开默认没有身份段，不把空身份或内部型号写入 Git 显示名。
+            git('-c', 'commit.gpgsign=false', 'commit', '--allow-empty', '-F', '-',
                 input=public_result['header'] + '\n\n##问题：入口异常。\n\n##解决：修复并验证。\n')
-            self.assertEqual(git('log', '-1', '--format=%an%n%cn'), 'fixture-model-v2\nfixture-model-v2')
+            self.assertEqual(git('log', '-1', '--format=%s%n%an%n%cn'),
+                             '修复公开入口\nSharedAccountFixture\nSharedAccountFixture')
+            self.assertEqual(git('log', '-1', '--format=%B'),
+                             '修复公开入口\n\n##问题：入口异常。\n\n##解决：修复并验证。')
             self.assertEqual((repo / '.git/config').read_bytes(), config_before)
             self.assertEqual(git('cat-file', 'commit', first_commit), first_object)
 

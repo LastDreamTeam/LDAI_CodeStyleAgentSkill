@@ -5,10 +5,12 @@ from contextlib import contextmanager, nullcontext
 import json
 import os
 from pathlib import Path
+import stat
 
 VARIABLE = 'LD_CODESTYLE_MEMORY_BLACKLIST'
 LOCK_NAME = 'project-memory-blacklist.lock'
 _MISSING = object()
+_MEMORY_NAMES = ('USER.md', 'MEMORY.md', 'DEBUG.md')
 
 
 class PersistenceUncertainError(ValueError):
@@ -142,11 +144,100 @@ def _persist_value(registry, value, snapshot):
         raise PersistenceUncertainError()
 
 
+def detect_project_kind(project_root):
+    """OpenAI: 用明确工程标记识别重型引擎；无法确认时返回 unknown，不猜测语言栈。"""
+    root = Path(project_root)
+    if (root / 'Assets').is_dir() and (root / 'ProjectSettings' / 'ProjectVersion.txt').is_file():
+        return 'unity'
+    if any(root.glob('*.uproject')):
+        return 'unreal'
+    if (root / 'project.godot').is_file():
+        return 'godot'
+    if (root / 'assets').is_dir() and (
+            (root / 'project.json').is_file()
+            or (root / 'cc.config.json').is_file()
+            or (root / 'settings' / 'services.json').is_file()):
+        return 'cocos'
+    return 'unknown'
+
+
+def _project_target(path, root):
+    """OpenAI: 只返回项目根内的现有目标，排除 Git 元数据、断链和链接环。"""
+    try:
+        target = path.resolve(strict=True)
+        relative = target.relative_to(root)
+    except (OSError, RuntimeError, ValueError):
+        return None
+    return None if any(os.path.normcase(part) == '.git' for part in relative.parts) else target
+
+
+def _has_memory_files(directory, root):
+    """OpenAI: 按原有三个文件名查询，先核目录，再核文件链接的最终位置。"""
+    local = _project_target(directory, root)
+    if local is None:
+        return False
+    for name in _MEMORY_NAMES:
+        target = _project_target(local / name, root)
+        if target is not None and target.is_file():
+            return True
+    return False
+
+
+def _project_directory(entry, root):
+    """OpenAI: 普通目录复用已核父路径，目录链接及 Windows 联接须先核真实目标。"""
+    if not entry.is_symlink():
+        if not entry.is_dir(follow_symlinks=False):
+            return None
+        # OpenAI: Python 3.10 的 is_symlink 不含 NTFS junction，目录项属性可识别它。
+        if os.name != 'nt' or not (entry.stat(follow_symlinks=False).st_file_attributes
+                                   & stat.FILE_ATTRIBUTE_REPARSE_POINT):
+            return Path(entry.path)
+    target = _project_target(Path(entry.path), root)
+    return target if target is not None and target.is_dir() else None
+
+
+def has_existing_memory(project_root):
+    """OpenAI: 识别项目根内各区域的 Agentic 记忆文件，目录和文件均可通过根内链接定位。"""
+    root = Path(project_root).resolve(strict=True)
+    if _has_memory_files(root / 'Agentic', root):
+        return True
+    pending = [root]
+    visited = {root}
+    while pending:
+        directory = pending.pop()
+        try:
+            entries = os.scandir(directory)
+        except (FileNotFoundError, NotADirectoryError, PermissionError):
+            continue
+        with entries:
+            for entry in entries:
+                if os.path.normcase(entry.name) == '.git':
+                    continue
+                try:
+                    child = _project_directory(entry, root)
+                except (FileNotFoundError, NotADirectoryError, PermissionError):
+                    # OpenAI: 目录项可能在枚举后消失；不影响同一项目的其他区域。
+                    continue
+                if child is None:
+                    continue
+                # OpenAI: 先按入口名查文件，再按物理目录去重；同一目录也可能有 Agentic 别名。
+                if (directory != root and entry.name.casefold() == 'agentic'
+                        and _has_memory_files(directory / 'Agentic', root)):
+                    return True
+                if child not in visited:
+                    visited.add(child)
+                    pending.append(child)
+    return False
+
+
 def project_memory(command, project_root, *, owner_requested=False, persist_user=False,
                    environ=None, registry=None, windows=None, lock_directory=None):
     """OpenAI: 返回当前项目记忆状态及可选环境建议，只有显式 Windows 持久化才写系统。
 
-    enabled/excluded_roots 始终是已观察到的实际状态；desired_* 是主人要求的候选。
+    enabled 表示当前是否应自动创建/维护共享记忆：未被黑名单排除即默认启用，
+    与引擎或语言无关。调用方按主人/成员/合作者角色判定适用性；角色不明时按
+    合并权限判定，本工具不认证身份或验权。excluded_roots 是已观察的排除列表；
+    desired_* 是主人要求的候选。
     默认变更不改进程环境或项目文件，Windows 写后读验成功才返回 persisted=true。
     environ/registry/windows/lock_directory 可注入隔离测试；持久变更在当前用户共享锁
     内重读、计算与写验，正常查询只读取本机单个环境变量，不写锁或项目资料。
@@ -171,11 +262,16 @@ def project_memory(command, project_root, *, owner_requested=False, persist_user
         registry = None
     write_verified = False
     try:
+        # OpenAI: 项目文件只提供提示，扫描不占其他项目共用的环境写锁。
+        kind = detect_project_kind(root)
+        existing = has_existing_memory(root)
         # OpenAI: 必须在锁内读取最新列表再修改，单独锁住 Set 仍会丢失其他项目的并发更新。
         with user_environment_lock(lock_directory) if persist_user and windows else nullcontext():
             state = _load_state(os.environ if environ is None else environ, registry)
             roots = state['roots']
-            result = {'status': 'ok', 'project_root': root, 'enabled': root not in roots,
+            result = {'status': 'ok', 'project_root': root,
+                      'enabled': root not in roots,
+                      'project_kind': kind, 'existing_memory': existing,
                       'excluded_roots': list(roots), 'variable': VARIABLE,
                       'value': serialize_blacklist(roots), 'source': state['source'], 'persisted': False}
             if command == 'show':
@@ -186,12 +282,15 @@ def project_memory(command, project_root, *, owner_requested=False, persist_user
                 desired.append(root)
             elif command == 'include':
                 desired = [candidate for candidate in desired if candidate != root]
-            result.update(status='environment_update_required', desired_enabled=root not in desired,
+            result.update(status='environment_update_required',
+                          desired_enabled=root not in desired,
                           desired_excluded_roots=desired, value=serialize_blacklist(desired))
             if persist_user and windows:
                 _persist_value(registry, result['value'], state['snapshot'])
                 write_verified = True
-                result.update(status='updated', enabled=root not in desired, excluded_roots=list(desired),
+                result.update(status='updated',
+                              enabled=root not in desired,
+                              excluded_roots=list(desired),
                               source='user_environment', persisted=True)
             else:
                 # OpenAI: 给出候选不代表生效；非 Windows 由已有宿主入口落地，不改 shell profile。

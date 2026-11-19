@@ -597,7 +597,7 @@ def main():
     header.add_argument('--reasoning-effort', help='Actual reasoning strength; none only when no control exists')
     public = header.add_mutually_exclusive_group()
     public.add_argument('--public-name', help='Explicitly authorized public display name override')
-    public.add_argument('--omit-public-identity', action='store_true', help='Explicitly authorized public omission')
+    public.add_argument('--omit-public-identity', action='store_true', help='Alias for the public default: summary-only header')
     header.add_argument('--pc', help='Explicitly provided computer name; never read from this OS')
     header.add_argument('--computer-name', help='Compatibility alias for explicitly provided --pc')
     header.add_argument('--summary', required=True)
