@@ -242,7 +242,7 @@ class DirectoryContextTests(unittest.TestCase):
             with self.subTest(path=path.name):
                 for term in ('可核对的重复依据', '同一条目标识', '同一来源哈希', '无损整合', '内容压缩', '专门获授权', '审计/辅助模型'):
                     self.assertIn(term, text)
-        self.assertIn('否则直接忽略', (SKILL/'SKILL.md').read_text(encoding='utf-8'))
+        self.assertIn('直接忽略该整理并保留原文', (SKILL/'SKILL.md').read_text(encoding='utf-8'))
 
 
 if __name__ == '__main__':
