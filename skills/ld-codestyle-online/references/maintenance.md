@@ -1,5 +1,7 @@
 # 安装、配置与检查/更新
 
+`auto_update=true` 仍可以是新安装的配置默认。但普通写代码、审查或提交任务**不要把** `python -B scripts/maintain.py sync --idle` **当作开工第一件事**。只在专门的维护回合，或用户明确要求检查、更新本技能时，才运行 `show` / `check` / `sync` / `health` 并阅读本页。与本技能无关的任务不触发维护。
+
 首次安装请把[给 Agent 的安装说明](https://github.com/LastDreamTeam/LDAI_CodeStyleAgentSkill/blob/main/skills/install.md)交给当前 Agent；它须完成环境识别、完整技能接入、实际检查及宿主发现验证，不只复制文档。
 
 需要 Python 3.10+；Git 克隆更新另需 Git，Hermes 安装使用当前环境的 `hermes` 命令。没有 Python 时规范仍可阅读，但脚本未运行就不能声称已自动检查或更新。
@@ -36,9 +38,9 @@ python -B scripts/maintain.py health
 
 ```sh
 python -B scripts/maintain.py health --require-healthy
-# 以下以依赖方需要 0.6.1 为例，使用时换成项目实际版本
-python -B scripts/maintain.py health --min-version 0.6.1
-python -B scripts/maintain.py health --require-version 0.6.1 --require-healthy
+# 以下以依赖方需要 0.7.0 为例，使用时换成项目实际版本
+python -B scripts/maintain.py health --min-version 0.7.0
+python -B scripts/maintain.py health --require-version 0.7.0 --require-healthy
 ```
 
 | 字段 | 含义 |
