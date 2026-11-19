@@ -182,14 +182,27 @@ class PublicCommitPrivacyTests(unittest.TestCase):
                 self.assertIn('公开', text)
                 self.assertIn('私有', text)
                 self.assertIn('隐私', text)
+                self.assertNotRegex(text, r'公开(?:目标| Bot)?默认(?:只留|只需|只记|用|是)(?:Bot|昵称)')
+                if path.parent == skill / 'templates':
+                    header, changes = text.split('## 变更记录', 1)
+                    self.assertIn('公开默认不写模型身份段', header)
+                    self.assertIn('公开目标默认不写模型身份段', changes)
+                    self.assertIn('私有身份记录：`##模型：', changes)
         spec = (skill / 'references/commit.md').read_text(encoding='utf-8')
         for term in ('待推送提交', '中间版本', '证件号', '密钥', '撤销/轮换',
                      'private=false', 'internal', '不是通用脱敏器', '--visibility public',
                      '未知/查询失败不默认私有', '不重写旧提交', '--reasoning-effort',
                      '--public-name', '--omit-public-identity', '独立身份', 'none', '自有邮箱'):
             self.assertIn(term, spec)
-        for required in ('公开仓库：默认只留摘要', '不写模型身份段', '只写摘要'):
+        for required in ('公开仓库：首行只写摘要', '不写模型身份段', '公开默认返回空 `identity`',
+                         '已获准公开的真实显示名和邮箱'):
             self.assertIn(required, spec)
+        public_guide = spec.split('### 公开仓库：', 1)[1].split('用户可明确要求公开显示名', 1)[0]
+        public_example = public_guide.split('```text\n', 1)[1].split('\n```', 1)[0]
+        summary, problem, solution = public_example.split('\n\n')
+        self.assertNotIn('##模型：', summary)
+        self.assertRegex(problem, r'^##问题：.+')
+        self.assertRegex(solution, r'^##解决：.+')
         for obsolete in ('生成器默认调用当前 OS', '--client` 与 `--bot` 二选一',
                          '不在姓名中塞型号或PC', '默认保留简短身份'):
             self.assertNotIn(obsolete, spec)

@@ -25,14 +25,36 @@ class ScopeAdoptionContractTests(unittest.TestCase):
     def test_adoption_signals_cover_first_party_non_unity_projects(self):
         """Anthropic: 采用信号必须可判定，且与 Unity 结构规则分开。"""
         entry = read(SKILL / "SKILL.md")
-        rule = entry.split("4. **其余源码风格", 1)[1].split("\n5. ", 1)[0]
-        for term in ("LD/LastDreamTeam", "AGENTS.md", "`LD:`", "`I<类型>Base`", "`.Agentic`",
-                     "用户当次明确要求", "不论是否Unity", "第三方或他人项目须明确采用", "不能仅凭"):
+        rule = entry.split("4. **源码风格", 1)[1].split("\n5. ", 1)[0]
+        for term in ("适用仓库的一方代码", "AGENTS.md", "`LD:`", "`I<类型>Base`", "`.Agentic`",
+                     "用户当次明确要求", "不论是否Unity", "ProjectSettings/ProjectVersion.txt", "不能仅凭"):
             with self.subTest(term=term):
                 self.assertIn(term, rule)
         comments = read(SKILL / "references/comments.md")
         self.assertIn("LD/LastDreamTeam 一方仓库", comments.split("\n## ", 1)[0])
-        self.assertIn("在已采用LD源码风格的一方代码", entry)
+        self.assertIn("适用仓库默认对自己维护的源码执行", comments)
+
+    def test_shared_memory_does_not_require_opt_in_or_a_daily_lookup(self):
+        """OpenAI: 安装入口、规则与 CLI 字段对初次参与的轻量仓库给出相同默认值。"""
+        for path in (SKILL / "SKILL.md", SKILL / "references/memory-scope.md",
+                     ROOT / "skills/install.md", ROOT / "README.md"):
+            with self.subTest(path=path):
+                content = read(path)
+                for term in ("主人、成员或合作者", "当前 Git 账号", "目标仓库", "合并权限", "配置或查询黑名单"):
+                    self.assertIn(term, content)
+                self.assertNotIn("未被排除，且为重型引擎或已有记忆文件", content)
+        fields = read(SKILL / "references/memory-scope.md").split("| `enabled` / `excluded_roots` |", 1)[1]
+        self.assertIn("是否已有记忆文件无关", fields.splitlines()[0])
+
+    def test_daily_work_has_no_version_sync_preflight(self):
+        """OpenAI: 安装后的日常使用说明不能重新要求每次打开技能都同步。"""
+        for path in (ROOT / "README.md", ROOT / "skills/install.md", SKILL / "references/maintenance.md"):
+            with self.subTest(path=path):
+                content = read(path)
+                self.assertIn("普通编码、审查和提交无需检查或更新本技能", content)
+                self.assertIn("安装验收、专门维护或用户要求", content)
+                self.assertNotIn("入口必须调用 `sync --idle`", content)
+                self.assertNotIn("执行依赖本技能的长任务时运行 `sync --idle`", content)
 
     def test_workflow_rules_yield_to_project_and_current_instruction(self):
         """OpenAI: 保护先交审查、再由人决定的两个阶段，已有当前授权可追溯。"""
@@ -65,12 +87,13 @@ class ScopeAdoptionContractTests(unittest.TestCase):
         self.assertLessEqual(len(description), 1024)
         # OpenAI: 宿主可能截短描述，所以把适用项目放在前面，并避免 XML 形状的元数据。
         self.assertNotRegex(description, r"[<>]")
-        for term in ("writing", "reviewing", "committing", "LD/LastDreamTeam"):
+        for term in ("writing", "reviewing", "committing", "LD/LastDreamTeam", "owner, member or collaborator",
+                     "merge permission", "current Git account", "target repository"):
             with self.subTest(term=term):
                 self.assertIn(term, description)
-        for term in ("Issues", "README", "PRs"):
+        for term in ("Issues", "README", "PRs", "reporting results"):
             with self.subTest(term=term):
-                self.assertNotIn(term, description)
+                self.assertIn(term, description)
 
     def test_installed_skill_docs_do_not_link_outside_the_skill(self):
         """Anthropic: Hermes 只装技能子目录，技能内相对链接不能跳出安装单元。"""

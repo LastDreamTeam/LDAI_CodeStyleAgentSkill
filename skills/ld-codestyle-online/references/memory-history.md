@@ -2,7 +2,7 @@
 
 ## 两层职责
 
-参考 [Hermes Memory](https://hermes-agent.nousresearch.com/docs/user-guide/features/memory) 的“有限常驻记忆 + 按需历史检索”。不读取其私有 `state.db`，不复制全量聊天归档；Hermes 的额度满时拒写也不等于自动无损压缩。
+日常先读本项目的 Markdown 摘要。区域 README 已声明使用精选历史时，需要核对原话或旧修复才查该区域自己的 SQLite 文件。
 
 - `Agentic/USER.md`、`MEMORY.md`、`DEBUG.md` 是有硬上限的当前摘要；README继续承担地图和业务说明，不作为第四份历史流水。
 - 同目录 `history.sqlite3` 保存**精选完整历史**：属于所属README声明责任范围的用户原话，以及已验证的bug修复、踩坑与避坑经验。不是全部项目活动或全部会话的逐字档案，不捕获其他区域或Bot私人记忆。

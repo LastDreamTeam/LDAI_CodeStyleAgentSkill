@@ -163,6 +163,8 @@ class CompactCommitIdentityTests(unittest.TestCase):
                 input=public_result['header'] + '\n\n##问题：入口异常。\n\n##解决：修复并验证。\n')
             self.assertEqual(git('log', '-1', '--format=%s%n%an%n%cn'),
                              '修复公开入口\nSharedAccountFixture\nSharedAccountFixture')
+            self.assertEqual(git('log', '-1', '--format=%B'),
+                             '修复公开入口\n\n##问题：入口异常。\n\n##解决：修复并验证。')
             self.assertEqual((repo / '.git/config').read_bytes(), config_before)
             self.assertEqual(git('cat-file', 'commit', first_commit), first_object)
 

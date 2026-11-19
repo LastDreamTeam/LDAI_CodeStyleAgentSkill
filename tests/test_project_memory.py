@@ -156,6 +156,114 @@ class ProjectMemoryTests(unittest.TestCase):
             self.assertFalse(result['enabled'])
             self.assertEqual(result['project_kind'], 'unity')
 
+    def make_symlink(self, link, target, directory=True):
+        """OpenAI: 以真实链接构造路径，只在 Windows 未授予创建符号链接权限时跳过。"""
+        try:
+            link.symlink_to(target, target_is_directory=directory)
+        except OSError as exc:
+            if getattr(exc, 'winerror', None) == 1314:
+                self.skipTest('Windows symlink privilege unavailable')
+            raise
+
+    def check_directory_links(self, create_link):
+        """OpenAI: 用同一套项目内外、重复入口与环路现场检验符号链接和 Windows 联接。"""
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp) / 'project'
+            module = project / 'module'
+            records = project / 'records'
+            other = Path(tmp) / 'project-other'
+            module.mkdir(parents=True)
+            records.mkdir()
+            (other / 'Agentic').mkdir(parents=True)
+            (other / 'Agentic' / 'MEMORY.md').write_text('other project', encoding='utf-8')
+            (records / 'USER.md').write_text('local intent', encoding='utf-8')
+            create_link(project / 'Agentic', other / 'Agentic')
+            create_link(project / 'external', other)
+            create_link(project / 'alias', module)
+            create_link(module / 'loop', project)
+            metadata = project / '.git' / 'records'
+            metadata.mkdir(parents=True)
+            (metadata / 'MEMORY.md').write_text('git fixture', encoding='utf-8')
+            create_link(module / 'metadata', metadata)
+            create_link(records / 'Agentic', metadata)
+
+            with patch.object(memory.os, 'scandir', wraps=os.scandir) as scan:
+                self.assertFalse(memory.has_existing_memory(project))
+            # OpenAI: 无命中时实际遍历完整个测试项目，但外部目录与已访问目录都不再进入。
+            visited = [Path(call.args[0]).resolve() for call in scan.call_args_list]
+            self.assertCountEqual(visited, [project.resolve(), module.resolve(), records.resolve()])
+
+            create_link(module / 'Agentic', records)
+            code, result = self.invoke(project, 'show')
+            self.assertEqual(code, 0)
+            self.assertTrue(result['existing_memory'])
+            self.assertTrue(result['enabled'])
+
+    def test_project_modules_and_root_fast_path(self):
+        """OpenAI: 真实模块可名为 Build 或 Library；根目录已有记忆可直接命中。"""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            area = root / 'src' / 'Build' / 'Library' / 'Agentic'
+            area.mkdir(parents=True)
+            (area / 'README.md').write_text('module index', encoding='utf-8')
+            self.assertFalse(memory.has_existing_memory(root))
+            (area / 'DEBUG.md').write_text('module history', encoding='utf-8')
+            self.assertTrue(memory.has_existing_memory(root))
+            (root / 'Agentic').mkdir()
+            (root / 'Agentic' / 'MEMORY.md').write_text('root history', encoding='utf-8')
+            with patch.object(memory.os, 'scandir', side_effect=AssertionError('unexpected scan')):
+                self.assertTrue(memory.has_existing_memory(root))
+
+    def test_disappearing_directory_entry_does_not_hide_module_memory(self):
+        """OpenAI: 枚举与查询之间消失一个目录项时继续查找同项目的真实记忆。"""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / 'moving').mkdir()
+            area = root / 'module' / 'Agentic'
+            area.mkdir(parents=True)
+            (area / 'MEMORY.md').write_text('module history', encoding='utf-8')
+            classify = memory._project_directory
+
+            def classify_during_move(entry, project):
+                """OpenAI: 只注入单个条目的删除竞态，其余路径用实际文件系统验证。"""
+                if entry.name == 'moving':
+                    raise FileNotFoundError(entry.path)
+                return classify(entry, project)
+
+            with patch.object(memory, '_project_directory', side_effect=classify_during_move):
+                self.assertTrue(memory.has_existing_memory(root))
+
+    def test_only_in_project_directory_symlinks_contribute_memory(self):
+        """OpenAI: 根和模块的目录符号链接不跨项目，根内别名仍可暴露实际记忆。"""
+        self.check_directory_links(self.make_symlink)
+
+    @unittest.skipUnless(os.name == 'nt', 'NTFS junctions require Windows')
+    def test_only_in_project_junctions_contribute_memory(self):
+        """OpenAI: 用不依赖符号链接权限的真实 NTFS 联接复核根内外和循环。"""
+        import _winapi
+        self.check_directory_links(lambda link, target: _winapi.CreateJunction(str(target), str(link)))
+
+    def test_memory_files_resolve_within_the_project(self):
+        """OpenAI: 根级和模块级的三个记忆文件允许根内链接，不把外链、断链和普通说明当记忆。"""
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp) / 'project'
+            module = project / 'module' / 'Agentic'
+            module.mkdir(parents=True)
+            records = project / 'Agentic'
+            records.mkdir()
+            external = Path(tmp) / 'external.md'
+            external.write_text('other project', encoding='utf-8')
+            local = project / 'notes.md'
+            local.write_text('local intent', encoding='utf-8')
+            (module / 'README.md').write_text('module index', encoding='utf-8')
+            (records / 'DEBUG.md').mkdir()
+            self.make_symlink(records / 'USER.md', external, directory=False)
+            self.make_symlink(module / 'MEMORY.md', external, directory=False)
+            self.make_symlink(module / 'DEBUG.md', project / 'missing.md', directory=False)
+            self.assertFalse(memory.has_existing_memory(project))
+            self.make_symlink(module / 'USER.md', local, directory=False)
+            self.assertTrue(memory.has_existing_memory(project))
+
     def test_exclude_and_include_require_explicit_owner_request(self):
         """OpenAI: 缺少主人明确要求声明时，两种变更都不得生成已生效结果或写环境。"""
         with tempfile.TemporaryDirectory() as tmp:
